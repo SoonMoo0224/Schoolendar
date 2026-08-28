@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스쿨랜더 Schoolendar · 학교 생활 캘린더</title>
+<style>
+:root{
+  --blue:#dce9fb; --blue-d:#6f9ceb;
+  --mint:#d8f3ea; --mint-d:#4fbf94;
+  --yellow:#fdf1cf; --yellow-d:#e8b923;
+  --pink:#fbe1ec; --pink-d:#e8679f;
+  --purple:#ece3fb; --purple-d:#9b7ce0;
+  --ink:#2c2a3a; --sub:#8a869c; --line:#ece9f5;
+  --bg:#fbfaff; --card:#ffffff;
+  --radius:16px; --shadow:0 4px 18px rgba(90,80,150,.08);
+  --today-ring: 0 0 0 2px var(--purple-d);
+}
+*{box-sizing:border-box;}
+body.dark{
+  --ink:#eceaf5; --sub:#a8a4bd; --line:#3a3750; --bg:#1b1927; --card:#242238;
+  --shadow:0 4px 18px rgba(0,0,0,.35);
+}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  font-family:'Pretendard','Apple SD Gothic Neo','Segoe UI',sans-serif;
+  background:var(--bg); color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+
+.app{display:flex; min-height:100vh;}
+
+/* ---------- Sidebar (desktop) ---------- */
+.sidebar{
+  width:220px; flex-shrink:0; background:var(--card); border-right:1px solid var(--line);
+  padding:22px 14px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px;
+}
+.brand{display:flex; align-items:center; gap:8px; padding:6px 10px 22px; font-weight:800; font-size:19px;}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--pink-d),var(--purple-d));}
+.nav-item{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:12px;
+  color:var(--sub); font-weight:600; font-size:14.5px; border:none; background:transparent; text-align:left; width:100%;
+}
+.nav-item:hover{background:var(--blue); color:var(--ink);}
+.nav-item.active{background:var(--ink); color:#fff;}
+body.dark .nav-item.active{background:var(--purple-d); color:#fff;}
+.nav-item .ic{width:18px;text-align:center;}
+.sidebar-foot{margin-top:auto; font-size:12px; color:var(--sub); padding:10px;}
+
+/* ---------- Main ---------- */
+.main{flex:1; min-width:0; padding-bottom:80px;}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:18px 26px; border-bottom:1px solid var(--line); background:var(--bg); position:sticky; top:0; z-index:20;
+}
+.topbar h1{font-size:19px; margin:0; font-weight:800;}
+.topbar-actions{display:flex; align-items:center; gap:8px;}
+.icon-btn{
+  width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--card);
+  display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;
+}
+.badge{
+  position:absolute; top:-4px; right:-4px; background:var(--pink-d); color:#fff; font-size:10px; font-weight:700;
+  min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;
+}
+.btn{
+  padding:9px 16px; border-radius:12px; border:none; font-weight:700; font-size:13.5px;
+  background:var(--ink); color:#fff;
+}
+body.dark .btn{background:var(--purple-d);}
+.btn.ghost{background:var(--card); color:var(--ink); border:1px solid var(--line);}
+.btn.sm{padding:6px 12px;font-size:12.5px;}
+.btn.danger{background:#f4d4d4; color:#a23a3a;}
+
+.content{padding:22px 26px;}
+.section-title{font-size:15px; font-weight:800; margin:22px 0 10px;}
+.section-title:first-child{margin-top:0;}
+.grid{display:grid; gap:12px;}
+.g-3{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+.g-2{grid-template-columns:1fr 1fr;}
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;}
+.card.pastel-blue{background:var(--blue);}
+.card.pastel-mint{background:var(--mint);}
+.card.pastel-yellow{background:var(--yellow);}
+.card.pastel-pink{background:var(--pink);}
+.card.pastel-purple{background:var(--purple);}
+/* 파스텔 배경은 항상 밝으므로, 다크모드에서도 카드 안 글자색은 어두운 색으로 고정해 가독성을 확보 */
+.pastel-blue,.pastel-mint,.pastel-yellow,.pastel-pink,.pastel-purple{ --ink:#2c2a3a; --sub:#8a869c; color:var(--ink); }
+.today-hero{ --ink:#2c2a3a; --sub:#5a5670; }
+
+.period-card{
+  border-radius:14px; padding:12px 14px; border:1px solid rgba(0,0,0,.04); position:relative; cursor:pointer;
+  transition:transform .12s ease;
+}
+.period-card:hover{transform:translateY(-2px);}
+.period-card .pnum{font-size:11px; font-weight:800; opacity:.65; letter-spacing:.02em;}
+.period-card .psub{font-size:16px; font-weight:800; margin:4px 0 2px;}
+.period-card .pteacher{font-size:12px; opacity:.7;}
+.period-card .ptime{font-size:11px; opacity:.55; margin-top:6px;}
+.period-card.now{box-shadow:var(--today-ring);}
+.period-card.past{opacity:.45;}
+.period-card .ev-dot{position:absolute; top:10px; right:10px; width:8px;height:8px;border-radius:50%;background:var(--pink-d);}
+
+.empty{
+  text-align:center; padding:40px 20px; color:var(--sub); font-size:13.5px;
+}
+.empty .big{font-size:30px; margin-bottom:8px;}
+
+/* ---------- Today ---------- */
+.today-hero{
+  border-radius:20px; padding:22px; background:linear-gradient(135deg,var(--blue),var(--purple));
+  margin-bottom:6px;
+}
+.today-hero .date{font-size:13px; font-weight:700; opacity:.7;}
+.today-hero h2{margin:4px 0 0; font-size:24px;}
+
+.meal-list{display:flex; flex-direction:column; gap:6px; font-size:14.5px;}
+.meal-list div{padding:2px 0;}
+
+.event-row{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:var(--card);
+  border:1px solid var(--line); margin-bottom:8px; cursor:pointer;
+}
+.event-row .tag{font-size:11px; font-weight:800; background:var(--yellow); padding:3px 8px; border-radius:8px; white-space:nowrap;}
+.event-row .et{font-weight:700; font-size:14px;}
+.event-row .ed{font-size:12px; color:var(--sub);}
+
+/* ---------- Calendar ---------- */
+.cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+.cal-head .title{font-weight:800; font-size:17px;}
+.cal-nav{display:flex; gap:6px;}
+.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+.cal-dow{text-align:center; font-size:12px; font-weight:700; color:var(--sub); padding-bottom:4px;}
+.cal-cell{
+  min-height:88px; border-radius:12px; border:1px solid var(--line); background:var(--card); padding:6px;
+  cursor:pointer; display:flex; flex-direction:column; gap:3px; font-size:11.5px;
+}
+.cal-cell.other{opacity:.35;}
+.cal-cell.today{box-shadow:var(--today-ring);}
+.cal-cell .dnum{font-weight:800; font-size:13px;}
+.cal-tag{font-size:10px; padding:1px 5px; border-radius:6px; display:inline-block; width:fit-content;}
+.tag-meal{background:var(--yellow);}
+.tag-event{background:var(--pink);}
+
+.week-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+.week-table th,.week-table td{border:1px solid var(--line); padding:8px 6px; text-align:center; vertical-align:top;}
+.week-table th{background:var(--card); font-weight:800;}
+.week-table td.today-col{background:var(--blue);}
+
+/* ---------- Modal ---------- */
+.overlay{
+  position:fixed; inset:0; background:rgba(30,25,50,.35); display:none; align-items:flex-end; justify-content:center; z-index:100;
+}
+.overlay.show{display:flex;}
+.modal{
+  background:var(--card); width:100%; max-width:480px; border-radius:20px 20px 0 0; padding:20px; max-height:88vh; overflow:auto;
+  animation:up .18s ease;
+}
+@media(min-width:700px){
+  .overlay{align-items:center;}
+  .modal{border-radius:20px; margin-bottom:0;}
+}
+@keyframes up{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+.modal h3{margin:0 0 14px; font-size:17px;}
+.field{margin-bottom:12px;}
+.field label{display:block; font-size:12.5px; font-weight:700; color:var(--sub); margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:14px;
+}
+.field textarea{resize:vertical; min-height:60px;}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.modal-actions{display:flex; gap:8px; margin-top:16px;}
+.modal-actions .btn{flex:1;}
+.choice-row{display:flex; gap:8px; margin-top:6px;}
+.choice-row .btn{flex:1;}
+.err{color:#c0446b; font-size:12px; margin-top:4px; display:none;}
+.attach-item{display:flex; align-items:center; justify-content:space-between; background:var(--bg); padding:8px 10px; border-radius:10px; margin-top:6px; font-size:13px;}
+.attach-item a{color:var(--ink); text-decoration:none;}
+.switch{position:relative; width:42px; height:24px; flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute; inset:0; background:var(--line); border-radius:24px; transition:.2s;}
+.slider:before{content:"";position:absolute; width:18px;height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;}
+.switch input:checked + .slider{background:var(--mint-d);}
+.switch input:checked + .slider:before{transform:translateX(18px);}
+.switch-row{display:flex; align-items:center; justify-content:space-between; padding:10px 0;}
+
+/* ---------- Search ---------- */
+.search-box{display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:9px 12px; margin-bottom:14px;}
+.search-box input{border:none; outline:none; background:transparent; flex:1; font-size:14px; color:var(--ink);}
+
+/* ---------- Bottom nav (mobile) ---------- */
+.bottom-nav{display:none;}
+@media(max-width:860px){
+  .sidebar{display:none;}
+  .app{flex-direction:column;}
+  .bottom-nav{
+    display:flex; position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--line);
+    z-index:30; padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .bottom-nav button{
+    flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-size:10.5px; font-weight:700; color:var(--sub); padding:6px 2px;
+  }
+  .bottom-nav button.active{color:var(--ink);}
+  body.dark .bottom-nav button.active{color:var(--purple-d);}
+  .bottom-nav .ic{font-size:18px;}
+  .content{padding:16px;}
+  .topbar{padding:14px 16px;}
+  .g-2{grid-template-columns:1fr;}
+}
+
+.pill-tabs{display:flex; gap:6px; margin-bottom:14px; background:var(--card); border:1px solid var(--line); padding:4px; border-radius:12px; width:fit-content;}
+.pill-tabs button{border:none; background:transparent; padding:8px 16px; border-radius:9px; font-weight:700; font-size:13px; color:var(--sub);}
+.pill-tabs button.active{background:var(--ink); color:#fff;}
+body.dark .pill-tabs button.active{background:var(--purple-d);}
+
+.dow-tabs{display:flex; gap:6px; overflow-x:auto; margin-bottom:14px;}
+.dow-tabs button{border:1px solid var(--line); background:var(--card); padding:9px 16px; border-radius:12px; font-weight:700; font-size:13px; white-space:nowrap; color:var(--sub);}
+.dow-tabs button.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+body.dark .dow-tabs button.active{background:var(--purple-d); border-color:var(--purple-d);}
+
+.toast{
+  position:fixed; bottom:96px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px;
+  border-radius:12px; font-size:13px; z-index:200; opacity:0; pointer-events:none; transition:.25s;
+}
+.toast.show{opacity:1; bottom:110px;}
+@media(min-width:861px){.toast{bottom:24px;} .toast.show{bottom:34px;}}
+
+.notif-item{padding:10px 12px; border-radius:12px; background:var(--bg); margin-bottom:8px; font-size:13px;}
+.notif-item .nt-title{font-weight:800; margin-bottom:2px;}
+.notif-item .nt-time{font-size:11px; color:var(--sub);}
+.sample-badge{font-size:10px; background:var(--yellow); padding:2px 6px; border-radius:6px; margin-left:6px; font-weight:700;}
+.hint{font-size:12px; color:var(--sub); margin-top:8px; line-height:1.5;}
+kbd{background:var(--line); padding:1px 6px; border-radius:5px; font-size:11px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Desktop sidebar -->
+  <div class="sidebar">
+    <div class="brand"><span class="dot"></span> 스쿨랜더</div>
+    <button class="nav-item" data-view="today"><span class="ic">🏠</span> 오늘</button>
+    <button class="nav-item" data-view="calendar"><span class="ic">📅</span> 캘린더</button>
+    <button class="nav-item" data-view="schedule"><span class="ic">🗓️</span> 시간표</button>
+    <button class="nav-item" data-view="meal"><span class="ic">🍚</span> 급식</button>
+    <button class="nav-item" data-view="events"><span class="ic">📌</span> 일정</button>
+    <button class="nav-item" data-view="notif"><span class="ic">🔔</span> 알림</button>
+    <button class="nav-item" data-view="settings"><span class="ic">⚙️</span> 설정</button>
+    <div class="sidebar-foot">스쿨랜더 · 학교생활 매니저<br>모든 데이터는 이 브라우저에만 저장돼요.</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="topbarTitle">오늘</h1>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="btnNotif" title="알림 센터">🔔<span class="badge" id="notifBadge" style="display:none;">0</span></button>
+        <button class="btn" id="btnAddEvent">+ 일정 추가</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button data-view="today"><span class="ic">🏠</span>오늘</button>
+    <button data-view="calendar"><span class="ic">📅</span>캘린더</button>
+    <button data-view="schedule"><span class="ic">🗓️</span>시간표</button>
+    <button data-view="meal"><span class="ic">🍚</span>급식</button>
+    <button data-view="settings"><span class="ic">⚙️</span>설정</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modalBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   스쿨랜더(Schoolendar) — 학생용 학교 시간표·급식·일정 관리 웹앱
+   순수 HTML/CSS/JS. 서버 없이 localStorage(설정값) + IndexedDB(첨부파일)로 동작.
+   ========================================================================= */
+
+/* ---------------- 상수 ---------------- */
+const DOW = ['sun','mon','tue','wed','thu','fri','sat'];
+const DOW_KR = ['일','월','화','수','목','금','토'];
+const WEEKDAYS = ['mon','tue','wed','thu','fri']; // 기본 시간표 대상 요일
+const LS = {
+  schedule: 'sch_recurringSchedule',
+  overrides: 'sch_dateOverrides',
+  events: 'sch_events',
+  meals: 'sch_meals',
+  settings: 'sch_settings',
+  notifLog: 'sch_notifLog',
+  periodTimes: 'sch_periodTimes'
+};
+const PASTELS = ['pastel-blue','pastel-mint','pastel-yellow','pastel-pink','pastel-purple'];
+
+/* ---------------- 유틸 ---------------- */
+function pad(n){return String(n).padStart(2,'0');}
+function fmtDate(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function parseDate(s){const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d);}
+function todayStr(){return fmtDate(new Date());}
+function addDays(dateStr,n){const d=parseDate(dateStr); d.setDate(d.getDate()+n); return fmtDate(d);}
+function dowOf(dateStr){return DOW[parseDate(dateStr).getDay()];}
+function isWeekday(dateStr){const d=parseDate(dateStr).getDay(); return d>=1 && d<=5;}
+function fmtKrDate(dateStr){const d=parseDate(dateStr); return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${DOW_KR[d.getDay()]}요일`;}
+function fmtMD(dateStr){const d=parseDate(dateStr); return `${d.getMonth()+1}/${d.getDate()}`;}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function esc(s){return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* ---------------- 저장소 ---------------- */
+const Store = {
+  load(key, fallback){
+    try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  },
+  save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+};
+
+let state = {
+  schedule: Store.load(LS.schedule, { mon:[], tue:[], wed:[], thu:[], fri:[] }),
+  overrides: Store.load(LS.overrides, {}),        // { "YYYY-MM-DD": [period,...] }
+  events: Store.load(LS.events, []),               // [{id,date,title,description,period,startTime,endTime,attachments:[{id,name,type}],notification:{enabled,type,time}}]
+  meals: Store.load(LS.meals, {}),                 // { "YYYY-MM-DD": {meals:[],allergy,nutrition,origin,note} }
+  settings: Store.load(LS.settings, {
+    periodCount: 6,
+    notifDefaultTime: '20:00',
+    mealNotifEnabled: false,
+    mealNotifTime: '20:00',
+    defaultView: 'month',
+    hour24: true,
+    darkMode: false,
+    kakaoKey: '',
+    kakaoLinked: false,
+    syncEnabled: false,
+    syncProjectId: '',
+    syncApiKey: '',
+    auth: null
+  }),
+  notifLog: Store.load(LS.notifLog, []),           // [{id,title,body,time,read}]
+  periodTimes: Store.load(LS.periodTimes, defaultPeriodTimes()),
+  updatedAt: Store.load('sch_updatedAt', 0)
+};
+
+function defaultPeriodTimes(){
+  const base = [['09:00','09:50'],['10:00','10:50'],['11:00','11:50'],['13:00','13:50'],['14:00','14:50'],['15:00','15:50'],['16:00','16:50']];
+  const map = {};
+  base.forEach((t,i)=> map[i+1] = {start:t[0], end:t[1]});
+  return map;
+}
+
+function persist(){
+  state.updatedAt = Date.now();
+  Store.save(LS.schedule, state.schedule);
+  Store.save(LS.overrides, state.overrides);
+  Store.save(LS.events, state.events);
+  Store.save(LS.meals, state.meals);
+  Store.save(LS.settings, state.settings);
+  Store.save(LS.notifLog, state.notifLog);
+  Store.save(LS.periodTimes, state.periodTimes);
+  Store.save('sch_updatedAt', state.updatedAt);
+  schedulePush();
+}
+
+/* ---------------- IndexedDB (첨부파일) ---------------- */
+let idb = null;
+function initDB(){
+  return new Promise((resolve)=>{
+    const req = indexedDB.open('SchoolAppDB', 1);
+    req.onupgradeneeded = e => { e.target.result.createObjectStore('attachments', {keyPath:'id'}); };
+    req.onsuccess = e => { idb = e.target.result; resolve(); };
+    req.onerror = () => resolve(); // IndexedDB 사용 불가 시에도 앱은 동작 (첨부파일만 제한)
+  });
+}
+function idbPut(record){
+  return new Promise((resolve,reject)=>{
+    if(!idb) return reject('no-db');
+    const tx = idb.transaction('attachments','readwrite');
+    tx.objectStore('attachments').put(record);
+    tx.oncomplete = ()=>resolve(); tx.onerror = ()=>reject(tx.error);
+  });
+}
+function idbGet(id){
+  return new Promise((resolve)=>{
+    if(!idb) return resolve(null);
+    const tx = idb.transaction('attachments','readonly');
+    const req = tx.objectStore('attachments').get(id);
+    req.onsuccess = ()=>resolve(req.result||null);
+    req.onerror = ()=>resolve(null);
+  });
+}
+function idbDelete(id){
+  if(!idb) return;
+  const tx = idb.transaction('attachments','readwrite');
+  tx.objectStore('attachments').delete(id);
+}
+
+/* ---------------- 시간표 조회 (반복 vs 예외) ---------------- */
+// 우선순위: 특정 날짜 예외 > 요일 반복 시간표
+function getScheduleForDate(dateStr){
+  if(state.overrides[dateStr]) return { periods: state.overrides[dateStr], isOverride:true };
+  const dow = dowOf(dateStr);
+  if(WEEKDAYS.includes(dow)) return { periods: state.schedule[dow]||[], isOverride:false };
+  return { periods: [], isOverride:false };
+}
+function hasAnySchedule(){
+  return WEEKDAYS.some(d => (state.schedule[d]||[]).length>0);
+}
+
+/* ---------------- 일정 조회 ---------------- */
+function eventsOnDate(dateStr){
+  return state.events.filter(e=>e.date===dateStr).sort((a,b)=>(a.startTime||'99:99').localeCompare(b.startTime||'99:99'));
+}
+
+/* ---------------- 급식 조회 ---------------- */
+function mealOnDate(dateStr){ return state.meals[dateStr] || null; }
+function maxKnownPeriod(){
+  let max = state.settings.periodCount;
+  WEEKDAYS.forEach(d=> (state.schedule[d]||[]).forEach(p=>{ if(p.period>max) max=p.period; }));
+  Object.values(state.overrides).forEach(list=> list.forEach(p=>{ if(p.period>max) max=p.period; }));
+  return max;
+}
+
+/* ---------------- 뷰 라우팅 ---------------- */
+let currentView = 'today';
+let calMode = 'month'; // month/week/day
+let calAnchor = todayStr(); // 캘린더 기준 날짜
+let scheduleDow = (()=>{ const d=DOW[new Date().getDay()]; return WEEKDAYS.includes(d)?d:'mon'; })();
+let mealTab = 'today';
+
+function setView(v){
+  currentView = v;
+  document.querySelectorAll('.nav-item,.bottom-nav button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  const titles = {today:'오늘', calendar:'캘린더', schedule:'시간표', meal:'급식', events:'일정', notif:'알림', settings:'설정'};
+  document.getElementById('topbarTitle').textContent = titles[v]||'';
+  render();
+}
+
+function render(){
+  const c = document.getElementById('content');
+  if(currentView==='today') c.innerHTML = renderToday();
+  else if(currentView==='calendar') c.innerHTML = renderCalendar();
+  else if(currentView==='schedule') c.innerHTML = renderSchedule();
+  else if(currentView==='meal') c.innerHTML = renderMeal();
+  else if(currentView==='events') c.innerHTML = renderEventsList();
+  else if(currentView==='notif') c.innerHTML = renderNotifCenter();
+  else if(currentView==='settings') c.innerHTML = renderSettings();
+  bindDynamicHandlers();
+  updateNotifBadge();
+}
+
+/* ---------------- 오늘 화면 ---------------- */
+function renderPeriodCard(p, dateStr, idx){
+  const now = new Date();
+  const isTodayReal = dateStr===todayStr();
+  let cls='';
+  if(isTodayReal && p.startTime && p.endTime){
+    const nowM = now.getHours()*60+now.getMinutes();
+    const [sh,sm]=p.startTime.split(':').map(Number), [eh,em]=p.endTime.split(':').map(Number);
+    const s=sh*60+sm, e=eh*60+em;
+    if(nowM>=s && nowM<=e) cls='now'; else if(nowM>e) cls='past';
+  }
+  const hasEvent = eventsOnDate(dateStr).some(ev=>String(ev.period)===String(p.period));
+  const pastel = PASTELS[idx % PASTELS.length];
+  return `<div class="period-card card ${pastel} ${cls}" data-open-period="${p.period}" data-date="${dateStr}">
+    ${hasEvent?'<span class="ev-dot"></span>':''}
+    <div class="pnum">${p.period}교시</div>
+    <div class="psub">${esc(p.subject||'—')}</div>
+    <div class="pteacher">${p.teacher? esc(p.teacher)+' 선생님':''}</div>
+    <div class="ptime">${p.startTime&&p.endTime? `${p.startTime} - ${p.endTime}`:''}</div>
+  </div>`;
+}
+
+function renderDaySchedule(dateStr){
+  const {periods} = getScheduleForDate(dateStr);
+  if(!isWeekday(dateStr) && periods.length===0){
+    return `<div class="empty"><div class="big">🌤️</div>주말에는 기본 시간표가 없어요.</div>`;
+  }
+  if(periods.length===0){
+    return `<div class="empty"><div class="big">🗒️</div>시간표가 설정되지 않았습니다.</div>`;
+  }
+  const sorted = [...periods].sort((a,b)=>a.period-b.period);
+  return `<div class="grid g-3">${sorted.map((p,i)=>renderPeriodCard(p,dateStr,i)).join('')}</div>`;
+}
+
+function renderMealBlock(dateStr, title){
+  const m = mealOnDate(dateStr);
+  if(!m || !m.meals || m.meals.length===0){
+    return `<div class="empty" style="padding:24px;"><div class="big">🍽️</div>등록된 급식 정보가 없습니다.</div>`;
+  }
+  return `<div class="card pastel-yellow meal-list">
+    ${m.meals.map(x=>`<div>🍚 ${esc(x)}</div>`).join('')}
+    ${m.allergy?`<div class="hint">알레르기: ${esc(m.allergy)}</div>`:''}
+  </div>`;
+}
+
+function renderEventsBlock(dateStr){
+  const evs = eventsOnDate(dateStr);
+  if(evs.length===0) return `<div class="empty" style="padding:24px;"><div class="big">📭</div>등록된 일정이 없습니다.</div>`;
+  return evs.map(ev=>`
+    <div class="event-row" data-open-event="${ev.id}">
+      <div class="tag">${ev.period? ev.period+'교시':(ev.startTime||'종일')}</div>
+      <div style="flex:1;">
+        <div class="et">${esc(ev.title)}</div>
+        <div class="ed">${esc(ev.description||'')}${ev.attachments&&ev.attachments.length?` · 📎 ${ev.attachments.length}개`:''}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderToday(){
+  const t = todayStr();
+  const tmr = addDays(t,1);
+  return `
+    <div class="today-hero">
+      <div class="date">${fmtKrDate(t)}</div>
+      <h2>오늘도 좋은 하루 보내세요 👋</h2>
+    </div>
+
+    ${!hasAnySchedule() ? `
+      <div class="card" style="margin-top:16px; text-align:center;">
+        <div style="font-size:28px;">🗓️</div>
+        <div style="font-weight:800; margin:8px 0 4px;">시간표를 설정해보세요</div>
+        <div class="hint">요일별 기본 시간표를 등록하면 매주 자동으로 반복 표시돼요.</div>
+        <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
+          <button class="btn" id="btnWizard">첫 시간표 만들기</button>
+          <button class="btn ghost" id="btnSample">샘플 데이터 불러오기</button>
+        </div>
+      </div>` : ''}
+
+    <div class="section-title">오늘의 시간표</div>
+    ${renderDaySchedule(t)}
+
+    <div class="section-title">오늘의 급식</div>
+    ${renderMealBlock(t)}
+
+    <div class="section-title">오늘의 일정</div>
+    ${renderEventsBlock(t)}
+
+    <div class="section-title">내일 미리보기 · ${fmtKrDate(tmr)}</div>
+    <div class="card pastel-purple">
+      <div style="font-weight:800; margin-bottom:8px;">시간표</div>
+      ${(()=>{const {periods}=getScheduleForDate(tmr); if(periods.length===0) return `<div class="hint">${isWeekday(tmr)?'시간표가 설정되지 않았습니다.':'주말에는 기본 시간표가 없어요.'}</div>`;
+        return periods.slice().sort((a,b)=>a.period-b.period).map(p=>`<div style="font-size:13px; margin-bottom:2px;">${p.period}교시 ${esc(p.subject)}</div>`).join('');})()}
+      <div style="font-weight:800; margin:12px 0 8px;">급식</div>
+      ${(()=>{const m=mealOnDate(tmr); if(!m||!m.meals||!m.meals.length) return `<div class="hint">등록된 급식 정보가 없습니다.</div>`;
+        return m.meals.map(x=>`<div style="font-size:13px;">🍚 ${esc(x)}</div>`).join('');})()}
+      <div style="font-weight:800; margin:12px 0 8px;">일정</div>
+      ${(()=>{const evs=eventsOnDate(tmr); if(!evs.length) return `<div class="hint">등록된 일정이 없습니다.</div>`;
+        return evs.map(ev=>`<div style="font-size:13px; margin-bottom:2px;">${esc(ev.title)} ${ev.period?`→ ${ev.period}교시`:''}</div>`).join('');})()}
+    </div>
+  `;
+}
+
+/* ---------------- 캘린더 ---------------- */
+function renderCalendar(){
+  return `
+    <div class="pill-tabs">
+      <button data-calmode="month" class="${calMode==='month'?'active':''}">월간</button>
+      <button data-calmode="week" class="${calMode==='week'?'active':''}">주간</button>
+      <button data-calmode="day" class="${calMode==='day'?'active':''}">일간</button>
+    </div>
+    ${calMode==='month'?renderMonthView():calMode==='week'?renderWeekView():renderDayView()}
+  `;
+}
+
+function renderMonthView(){
+  const anchor = parseDate(calAnchor);
+  const y=anchor.getFullYear(), m=anchor.getMonth();
+  const first = new Date(y,m,1);
+  const startOffset = first.getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const cells=[];
+  for(let i=0;i<startOffset;i++){
+    const d = new Date(y,m,1-(startOffset-i));
+    cells.push({dateStr:fmtDate(d), other:true});
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    cells.push({dateStr:fmtDate(new Date(y,m,d)), other:false});
+  }
+  while(cells.length%7!==0 || cells.length<42){
+    const last = parseDate(cells[cells.length-1].dateStr);
+    const nd = new Date(last); nd.setDate(nd.getDate()+1);
+    cells.push({dateStr:fmtDate(nd), other:true});
+    if(cells.length>=42) break;
+  }
+  const t = todayStr();
+  return `
+    <div class="cal-head">
+      <button class="icon-btn" id="calPrev">‹</button>
+      <div class="title">${y}년 ${m+1}월</div>
+      <div class="cal-nav"><button class="btn ghost sm" id="calToday">오늘</button><button class="icon-btn" id="calNext">›</button></div>
+    </div>
+    <div class="cal-grid">
+      ${DOW_KR.map(d=>`<div class="cal-dow">${d}</div>`).join('')}
+      ${cells.map(c=>{
+        const evs = eventsOnDate(c.dateStr);
+        const meal = mealOnDate(c.dateStr);
+        return `<div class="cal-cell ${c.other?'other':''} ${c.dateStr===t?'today':''}" data-open-day="${c.dateStr}">
+          <div class="dnum">${parseDate(c.dateStr).getDate()}</div>
+          ${meal&&meal.meals&&meal.meals.length?`<span class="cal-tag tag-meal">🍚 급식</span>`:''}
+          ${evs.length?`<span class="cal-tag tag-event">${evs.length}건 · ${esc(evs[0].title.slice(0,6))}</span>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function startOfWeek(dateStr){
+  const d = parseDate(dateStr); const day=d.getDay();
+  const diff = day===0? -6 : 1-day; // 월요일 시작
+  d.setDate(d.getDate()+diff); return fmtDate(d);
+}
+
+function renderWeekView(){
+  const start = startOfWeek(calAnchor);
+  const days = Array.from({length:7},(_,i)=>addDays(start,i));
+  const t = todayStr();
+  const maxPeriod = Math.max(state.settings.periodCount, ...WEEKDAYS.map(d=>(state.schedule[d]||[]).reduce((a,p)=>Math.max(a,p.period),0)), 1);
+  const rows=[];
+  for(let p=1;p<=maxPeriod;p++){
+    rows.push(`<tr><th>${p}교시</th>${days.map(ds=>{
+      const {periods} = getScheduleForDate(ds);
+      const found = periods.find(x=>x.period===p);
+      return `<td class="${ds===t?'today-col':''}">${found?esc(found.subject):''}</td>`;
+    }).join('')}</tr>`);
+  }
+  return `
+    <div class="cal-head">
+      <button class="icon-btn" id="calPrev">‹</button>
+      <div class="title">${fmtMD(days[0])} - ${fmtMD(days[6])}</div>
+      <div class="cal-nav"><button class="btn ghost sm" id="calToday">오늘</button><button class="icon-btn" id="calNext">›</button></div>
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="week-table">
+      <thead><tr><th></th>${days.map(ds=>`<th class="${ds===t?'today-col':''}" data-open-day="${ds}" style="cursor:pointer;">${DOW_KR[parseDate(ds).getDay()]}<br><span style="font-weight:600;color:var(--sub);">${fmtMD(ds)}</span></th>`).join('')}</tr></thead>
+      <tbody>${rows.join('')}
+        <tr><th>일정</th>${days.map(ds=>{
+          const evs=eventsOnDate(ds);
+          return `<td>${evs.map(e=>`<div style="font-size:11px;">📌${esc(e.title.slice(0,8))}</div>`).join('')}</td>`;
+        }).join('')}</tr>
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+function renderDayView(){
+  const ds = calAnchor;
+  const {periods} = getScheduleForDate(ds);
+  const sorted = [...periods].sort((a,b)=>a.period-b.period);
+  return `
+    <div class="cal-head">
+      <button class="icon-btn" id="calPrev">‹</button>
+      <div class="title">${fmtKrDate(ds)}</div>
+      <div class="cal-nav"><button class="btn ghost sm" id="calToday">오늘</button><button class="icon-btn" id="calNext">›</button></div>
+    </div>
+    <div class="section-title">시간표</div>
+    ${sorted.length? `<div class="grid g-3">${sorted.map((p,i)=>renderPeriodCard(p,ds,i)).join('')}</div>` : `<div class="empty">${isWeekday(ds)?'시간표가 설정되지 않았습니다.':'주말에는 기본 시간표가 없어요.'}</div>`}
+    <div class="section-title">급식</div>
+    ${renderMealBlock(ds)}
+    <div class="section-title">일정</div>
+    ${renderEventsBlock(ds)}
+  `;
+}
+
+/* ---------------- 시간표 관리 화면 ---------------- */
+function renderSchedule(){
+  const dowLabel = {mon:'월요일',tue:'화요일',wed:'수요일',thu:'목요일',fri:'금요일'};
+  const list = (state.schedule[scheduleDow]||[]).slice().sort((a,b)=>a.period-b.period);
+  return `
+    <div class="dow-tabs">
+      ${WEEKDAYS.map(d=>`<button data-schdow="${d}" class="${scheduleDow===d?'active':''}">${dowLabel[d]}</button>`).join('')}
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div class="hint" style="margin:0;">${dowLabel[scheduleDow]} 기본(반복) 시간표 — 매주 이 요일에 자동 적용돼요.</div>
+      <button class="btn sm" id="btnAddPeriod">+ 교시 추가</button>
+    </div>
+    ${list.length? `<div class="grid g-3">${list.map((p,i)=>`
+      <div class="period-card card ${PASTELS[i%PASTELS.length]}" data-edit-recurring="${p.period}">
+        <div class="pnum">${p.period}교시</div>
+        <div class="psub">${esc(p.subject||'—')}</div>
+        <div class="pteacher">${p.teacher? esc(p.teacher)+' 선생님':''}</div>
+        <div class="ptime">${p.startTime} - ${p.endTime}</div>
+      </div>`).join('')}</div>`
+      : `<div class="empty"><div class="big">📘</div>${dowLabel[scheduleDow]} 시간표가 아직 없어요.</div>`}
+    <div class="section-title">시간표 설정 마법사</div>
+    <div class="card">
+      <div class="hint" style="margin:0 0 10px;">월~금 시간표를 한 번에 등록하고 싶다면 마법사를 사용하세요.</div>
+      <button class="btn ghost sm" id="btnWizard2">마법사 열기</button>
+      <button class="btn ghost sm" id="btnSample2">샘플 데이터 불러오기</button>
+    </div>
+  `;
+}
+
+/* ---------------- 급식 화면 ---------------- */
+function renderMeal(){
+  return `
+    <div class="pill-tabs">
+      <button data-mealtab="today" class="${mealTab==='today'?'active':''}">오늘</button>
+      <button data-mealtab="week" class="${mealTab==='week'?'active':''}">금주</button>
+      <button data-mealtab="month" class="${mealTab==='month'?'active':''}">이달</button>
+    </div>
+    <div style="text-align:right; margin-bottom:10px;"><button class="btn sm" id="btnAddMeal">+ 급식 추가</button></div>
+    ${mealTab==='today'?renderMealToday():mealTab==='week'?renderMealWeek():renderMealMonth()}
+  `;
+}
+function renderMealToday(){
+  const t=todayStr();
+  const m=mealOnDate(t);
+  return `<div class="section-title">${fmtKrDate(t)}</div>
+    ${m&&m.meals&&m.meals.length? `
+    <div class="card pastel-yellow">
+      <div style="font-weight:800; margin-bottom:8px;">🍚 오늘의 급식</div>
+      <div class="meal-list">${m.meals.map(x=>`<div>${esc(x)}</div>`).join('')}</div>
+      ${m.allergy?`<div class="hint">알레르기: ${esc(m.allergy)}</div>`:''}
+      ${m.nutrition?`<div class="hint">영양정보: ${esc(m.nutrition)}</div>`:''}
+      ${m.origin?`<div class="hint">원산지: ${esc(m.origin)}</div>`:''}
+      <div style="margin-top:10px;"><button class="btn ghost sm" data-edit-meal="${t}">수정</button></div>
+    </div>` : `<div class="empty"><div class="big">🍽️</div>등록된 급식 정보가 없습니다.</div>`}
+  `;
+}
+function renderMealWeek(){
+  const start = startOfWeek(calAnchor);
+  const days = Array.from({length:5},(_,i)=>addDays(start,i));
+  const t = todayStr();
+  return `<div class="cal-head">
+      <button class="icon-btn" id="mealWeekPrev">‹</button>
+      <div class="title">${fmtMD(days[0])} - ${fmtMD(days[4])} 급식</div>
+      <div class="cal-nav"><button class="btn ghost sm" id="mealWeekToday">이번 주</button><button class="icon-btn" id="mealWeekNext">›</button></div>
+    </div>
+  <table class="week-table" style="width:100%;">
+    <thead><tr><th>날짜</th><th>요일</th><th>급식</th></tr></thead>
+    <tbody>
+    ${days.map(ds=>{
+      const m=mealOnDate(ds);
+      return `<tr class="${ds===t?'today-col':''}" data-open-meal="${ds}" style="cursor:pointer;">
+        <td>${fmtMD(ds)}</td><td>${DOW_KR[parseDate(ds).getDay()]}</td>
+        <td style="text-align:left;">${m&&m.meals&&m.meals.length? esc(m.meals.join(' · ')) : '급식 없음'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+function renderMealMonth(){
+  const anchor = parseDate(calAnchor);
+  const y=anchor.getFullYear(), m=anchor.getMonth();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  let html = `<div class="cal-head">
+      <button class="icon-btn" id="mealMonthPrev">‹</button>
+      <div class="title">${y}년 ${m+1}월 급식</div>
+      <div class="cal-nav"><button class="btn ghost sm" id="mealMonthToday">이번 달</button><button class="icon-btn" id="mealMonthNext">›</button></div>
+    </div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const ds = fmtDate(new Date(y,m,d));
+    const dow = parseDate(ds).getDay();
+    const mo = mealOnDate(ds);
+    const weekend = dow===0||dow===6;
+    html += `<div class="card" style="margin-bottom:8px;" data-open-meal="${ds}">
+      <div style="font-weight:800; font-size:13px;">${m+1}월 ${d}일 ${DOW_KR[dow]}요일</div>
+      <div class="hint" style="margin-top:4px;">${mo&&mo.meals&&mo.meals.length? esc(mo.meals.join(' / ')) : (weekend?'급식 없음 (주말)':'급식 없음')}</div>
+    </div>`;
+  }
+  return html;
+}
+
+/* ---------------- 일정 목록 (검색) ---------------- */
+function renderEventsList(){
+  return `
+    <div class="search-box"><span>🔍</span><input id="searchInput" placeholder="일정 제목, 내용, 날짜, 첨부파일 검색"></div>
+    <div id="eventsListResult">${renderEventSearchResults('')}</div>
+  `;
+}
+function renderEventSearchResults(q){
+  q = (q||'').trim().toLowerCase();
+  let list = state.events.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(q){
+    list = list.filter(e =>
+      (e.title||'').toLowerCase().includes(q) ||
+      (e.description||'').toLowerCase().includes(q) ||
+      (e.date||'').includes(q) ||
+      (e.attachments||[]).some(a=>(a.name||'').toLowerCase().includes(q))
+    );
+  }
+  if(list.length===0) return `<div class="empty"><div class="big">📭</div>${q?'검색 결과가 없습니다.':'등록된 일정이 없습니다.'}</div>`;
+  return list.map(ev=>`
+    <div class="event-row" data-open-event="${ev.id}">
+      <div class="tag">${fmtMD(ev.date)}</div>
+      <div style="flex:1;">
+        <div class="et">${esc(ev.title)}</div>
+        <div class="ed">${ev.period?ev.period+'교시 · ':''}${esc(ev.description||'')}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------------- 알림 센터 ---------------- */
+function renderNotifCenter(){
+  const t = todayStr();
+  const items = state.notifLog.slice().sort((a,b)=>b.time.localeCompare(a.time));
+  const unread = items.filter(n=>!n.read).length;
+  if(items.length===0) return `<div class="empty"><div class="big">🔕</div>아직 알림이 없습니다. 일정에 알림을 설정해보세요.</div>`;
+  return `
+    <div class="hint" style="margin-bottom:12px;">읽지 않은 알림 ${unread}개</div>
+    ${items.map(n=>`
+      <div class="notif-item" data-read-notif="${n.id}" style="${n.read?'opacity:.6;':''}">
+        <div class="nt-title">${esc(n.title)}</div>
+        <div>${n.body.split('\n').map(l=>esc(l)).join('<br>')}</div>
+        <div class="nt-time">${n.time}</div>
+      </div>`).join('')}
+  `;
+}
+function updateNotifBadge(){
+  const unread = state.notifLog.filter(n=>!n.read).length;
+  const badge = document.getElementById('notifBadge');
+  if(unread>0){ badge.style.display='flex'; badge.textContent = unread>9?'9+':unread; }
+  else badge.style.display='none';
+}
+
+/* ---------------- 설정 화면 ---------------- */
+function renderSettings(){
+  const s = state.settings;
+  return `
+    <div class="section-title">시간표 설정</div>
+    <div class="card">
+      <div class="field"><label>기본 교시 수</label>
+        <input type="number" id="setPeriodCount" min="1" max="12" value="${s.periodCount}">
+      </div>
+      <div class="hint">교시 시간은 [시간표] 메뉴에서 각 교시 카드를 눌러 설정할 수 있어요.</div>
+    </div>
+
+    <div class="section-title">알림 설정</div>
+    <div class="card">
+      <div class="field"><label>기본 알림 시간 (전날)</label>
+        <select id="setNotifTime">
+          ${['08:00','18:00','19:00','20:00','21:00'].map(v=>`<option value="${v}" ${s.notifDefaultTime===v?'selected':''}>전날 ${v}</option>`).join('')}
+          <option value="custom" ${!['08:00','18:00','19:00','20:00','21:00'].includes(s.notifDefaultTime)?'selected':''}>직접 설정</option>
+        </select>
+      </div>
+      <div class="field" id="customNotifWrap" style="${['08:00','18:00','19:00','20:00','21:00'].includes(s.notifDefaultTime)?'display:none;':''}">
+        <label>직접 설정</label><input type="time" id="setNotifCustom" value="${s.notifDefaultTime}">
+      </div>
+      <div class="switch-row"><span>급식 알림 사용</span>
+        <label class="switch"><input type="checkbox" id="setMealNotif" ${s.mealNotifEnabled?'checked':''}><span class="slider"></span></label>
+      </div>
+      <div class="field"><label>급식 알림 시점</label>
+        <select id="setMealNotifTime">
+          ${['08:00','18:00','19:00','20:00','21:00'].map(v=>`<option value="${v}" ${s.mealNotifTime===v?'selected':''}>전날 ${v}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn ghost sm" id="btnReqNotifPerm">브라우저 알림 권한 요청</button>
+      <div class="hint">브라우저를 닫아둔 상태에서도 알림을 받으려면 별도의 서버(Push 서비스)가 필요해요. 이 앱은 서버 없이 동작하므로, 앱을 열어둔 상태에서의 알림과 언제든 확인 가능한 <b>알림 센터</b>를 함께 제공합니다.</div>
+    </div>
+
+    <div class="section-title">카카오톡 알림 (실험적)</div>
+    <div class="card pastel-yellow">
+      <div class="hint" style="margin:0 0 10px;">
+        임의의 단체 채팅방으로 자동 전송하는 기능은 카카오 정책상 서버 없이는 지원되지 않아요. 대신 <b>카카오톡 "나에게 보내기"</b> API로, 알림이 발생할 때 여러분의 카카오톡 "나와의 채팅"으로 안내 메시지를 보내드릴 수 있어요.
+      </div>
+      <div class="field"><label>Kakao JavaScript 키</label>
+        <input type="text" id="setKakaoKey" placeholder="Kakao Developers에서 발급받은 JS 키" value="${esc(s.kakaoKey)}">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn ghost sm" id="btnKakaoInit">SDK 연결</button>
+        <button class="btn ghost sm" id="btnKakaoLogin">${s.kakaoLinked?'로그인됨 ✓':'카카오 로그인'}</button>
+        <button class="btn ghost sm" id="btnKakaoTest">테스트 메시지 보내기</button>
+      </div>
+      <div class="hint">Kakao Developers(developers.kakao.com)에서 앱 등록 후 JavaScript 키와 도메인을 등록해야 사용할 수 있어요.</div>
+    </div>
+
+    <div class="section-title">기기 간 동기화</div>
+    <div class="card pastel-mint">
+      <div class="switch-row"><span>동기화 사용</span>
+        <label class="switch"><input type="checkbox" id="setSyncEnabled" ${s.syncEnabled?'checked':''}><span class="slider"></span></label>
+      </div>
+      <div class="field"><label>Firebase 프로젝트 ID</label>
+        <input type="text" id="setSyncProject" placeholder="예: my-school-app-1234" value="${esc(s.syncProjectId)}">
+      </div>
+      <div class="field"><label>Firebase Web API 키</label>
+        <input type="text" id="setSyncApiKey" placeholder="Firebase 콘솔 > 프로젝트 설정 > 일반에서 확인" value="${esc(s.syncApiKey)}">
+      </div>
+      ${s.auth ? `
+      <div class="card" style="background:var(--card); margin:10px 0;">
+        <div style="font-weight:800; font-size:13.5px;">✓ ${esc(s.auth.email)} 로 로그인됨</div>
+        <button class="btn ghost sm" id="btnAuthLogout" style="margin-top:8px;">로그아웃</button>
+      </div>
+      ` : `
+      <div class="field"><label>이메일</label><input type="email" id="authEmail" placeholder="you@example.com"></div>
+      <div class="field"><label>비밀번호 (6자 이상)</label><input type="password" id="authPassword" placeholder="••••••"></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn ghost sm" id="btnAuthSignup">계정 만들기</button>
+        <button class="btn ghost sm" id="btnAuthLogin">로그인</button>
+      </div>
+      <div class="err" id="authErr" style="display:none;"></div>
+      `}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn ghost sm" id="btnSyncUp">지금 업로드</button>
+        <button class="btn ghost sm" id="btnSyncDown">다른 기기 데이터 불러오기</button>
+      </div>
+      <div class="hint">
+        ① Firebase 콘솔(console.firebase.google.com)에서 프로젝트 생성 → <b>Authentication</b>에서 "이메일/비밀번호" 로그인 방식 켜기 → <b>Firestore Database</b> 만들기.<br>
+        ② Firestore 보안 규칙을 아래처럼 설정하세요 (본인 데이터만 본인만 접근 가능):<br>
+        <code style="display:block; background:var(--bg); padding:8px; border-radius:8px; margin:4px 0; font-size:11px; white-space:pre;">match /schoolendar-sync/{uid} {
+  allow read, write: if request.auth != null
+    && request.auth.uid == uid;
+}</code>
+        ③ 여기에 프로젝트 ID와 Web API 키를 입력하고, 계정을 만든 뒤 로그인하세요. 같은 계정으로 로그인한 모든 기기의 데이터가 자동으로 맞춰져요.<br>
+        ※ 일정에 첨부한 파일 자체는 용량 문제로 동기화되지 않고, 기기별로만 저장돼요.
+      </div>
+    </div>
+
+    <div class="section-title">화면 설정</div>
+    <div class="card">
+      <div class="field"><label>기본 캘린더 보기</label>
+        <select id="setDefaultView">
+          <option value="month" ${s.defaultView==='month'?'selected':''}>월간</option>
+          <option value="week" ${s.defaultView==='week'?'selected':''}>주간</option>
+          <option value="day" ${s.defaultView==='day'?'selected':''}>일간</option>
+        </select>
+      </div>
+      <div class="switch-row"><span>24시간제 사용</span>
+        <label class="switch"><input type="checkbox" id="setHour24" ${s.hour24?'checked':''}><span class="slider"></span></label>
+      </div>
+      <div class="switch-row"><span>다크 모드</span>
+        <label class="switch"><input type="checkbox" id="setDark" ${s.darkMode?'checked':''}><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="section-title">데이터 관리</div>
+    <div class="card" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn ghost sm" id="btnExport">데이터 내보내기</button>
+      <button class="btn ghost sm" id="btnImport">데이터 가져오기</button>
+      <button class="btn ghost sm" id="btnSample3">샘플 데이터 불러오기</button>
+      <button class="btn danger sm" id="btnReset">전체 데이터 초기화</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+  `;
+}
+
+/* ---------------- 모달 공통 ---------------- */
+function openModal(html){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeModal(); });
+
+/* ---------------- 일정 추가/수정 모달 ---------------- */
+function openEventModal(dateStr, existing){
+  const ev = existing || {id:null,date:dateStr||todayStr(),title:'',description:'',period:'',startTime:'',endTime:'',attachments:[],notification:{enabled:false,type:'dayBefore',time:state.settings.notifDefaultTime}};
+  openModal(`
+    <h3>${existing?'일정 수정':'일정 추가'}</h3>
+    <div class="field"><label>일정 제목 *</label><input id="evTitle" value="${esc(ev.title)}" placeholder="예: 과학 수행평가"></div>
+    <div class="field"><label>날짜 *</label><input type="date" id="evDate" value="${ev.date}"></div>
+    <div class="row2">
+      <div class="field"><label>시작 시간</label><input type="time" id="evStart" value="${ev.startTime||''}"></div>
+      <div class="field"><label>종료 시간</label><input type="time" id="evEnd" value="${ev.endTime||''}"></div>
+    </div>
+    <div class="field"><label>관련 교시</label>
+      <select id="evPeriod"><option value="">없음</option>${Array.from({length:maxKnownPeriod()},(_,i)=>i+1).map(p=>`<option value="${p}" ${String(ev.period)===String(p)?'selected':''}>${p}교시</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>상세 내용</label><textarea id="evDesc">${esc(ev.description)}</textarea></div>
+    <div class="field"><label>첨부 문서</label>
+      <input type="file" id="evFile" multiple>
+      <div id="evAttachList">${(ev.attachments||[]).map(a=>`<div class="attach-item" data-att-id="${a.id}"><span data-open-att="${a.id}" data-att-name="${esc(a.name)}" style="cursor:pointer; text-decoration:underline;">📎 ${esc(a.name)}</span><button class="btn ghost sm" data-remove-att="${a.id}">삭제</button></div>`).join('')}</div>
+    </div>
+    <div class="switch-row"><span>알림 사용</span>
+      <label class="switch"><input type="checkbox" id="evNotifEnabled" ${ev.notification&&ev.notification.enabled?'checked':''}><span class="slider"></span></label>
+    </div>
+    <div class="field"><label>알림 시간 (전날)</label>
+      <select id="evNotifTime">
+        ${['08:00','18:00','19:00','20:00','21:00'].map(v=>`<option value="${v}" ${(ev.notification&&ev.notification.time)===v?'selected':''}>전날 ${v}</option>`).join('')}
+        <option value="custom" ${(ev.notification&&ev.notification.time && !['08:00','18:00','19:00','20:00','21:00'].includes(ev.notification.time))?'selected':''}>직접 설정</option>
+      </select>
+    </div>
+    <div class="field" id="evNotifCustomWrap" style="${(ev.notification&&ev.notification.time && !['08:00','18:00','19:00','20:00','21:00'].includes(ev.notification.time))?'':'display:none;'}">
+      <label>직접 설정한 시간</label>
+      <input type="time" id="evNotifCustom" value="${(ev.notification&&ev.notification.time && !['08:00','18:00','19:00','20:00','21:00'].includes(ev.notification.time))?ev.notification.time:state.settings.notifDefaultTime}">
+    </div>
+    <div class="err" id="evErr">일정 제목과 날짜는 필수 입력 항목이에요.</div>
+    <div class="modal-actions">
+      ${existing? `<button class="btn danger" id="evDelete">삭제</button>`:''}
+      <button class="btn ghost" id="evCancel">취소</button>
+      <button class="btn" id="evSave">저장</button>
+    </div>
+  `);
+  window._pendingAttachments = (ev.attachments||[]).slice();
+  document.getElementById('evFile').addEventListener('change', async (e)=>{
+    for(const f of e.target.files){
+      const id = uid();
+      const buf = await f.arrayBuffer();
+      try{ await idbPut({id, name:f.name, type:f.type, data:buf}); }catch(err){}
+      window._pendingAttachments.push({id, name:f.name, type:f.type});
+      const wrap = document.getElementById('evAttachList');
+      wrap.insertAdjacentHTML('beforeend', `<div class="attach-item" data-att-id="${id}"><span data-open-att="${id}" data-att-name="${esc(f.name)}" style="cursor:pointer; text-decoration:underline;">📎 ${esc(f.name)}</span><button class="btn ghost sm" data-remove-att="${id}">삭제</button></div>`);
+      bindAttachOpen();
+      bindAttachRemove();
+    }
+  });
+  bindAttachRemove();
+  const evNotifTimeSel = document.getElementById('evNotifTime');
+  evNotifTimeSel.onchange = ()=>{ document.getElementById('evNotifCustomWrap').style.display = evNotifTimeSel.value==='custom'?'block':'none'; };
+  const originalAttachIds = (ev.attachments||[]).map(a=>a.id);
+  document.getElementById('evCancel').onclick = ()=>{
+    window._pendingAttachments.filter(a=>!originalAttachIds.includes(a.id)).forEach(a=>idbDelete(a.id));
+    closeModal();
+  };
+  if(existing) document.getElementById('evDelete').onclick = ()=>{
+    openConfirm('이 일정을 삭제할까요?', ()=>{
+      (ev.attachments||[]).forEach(a=>idbDelete(a.id));
+      state.events = state.events.filter(x=>x.id!==ev.id);
+      persist(); closeModal(); toast('일정을 삭제했어요.'); render();
+    });
+  };
+  document.getElementById('evSave').onclick = ()=>{
+    const title = document.getElementById('evTitle').value.trim();
+    const date = document.getElementById('evDate').value;
+    if(!title || !date){ document.getElementById('evErr').style.display='block'; return; }
+    const notifTimeSel = document.getElementById('evNotifTime').value;
+    const newEv = {
+      id: ev.id || uid(),
+      date, title,
+      description: document.getElementById('evDesc').value.trim(),
+      period: document.getElementById('evPeriod').value || null,
+      startTime: document.getElementById('evStart').value || '',
+      endTime: document.getElementById('evEnd').value || '',
+      attachments: window._pendingAttachments,
+      notification: {
+        enabled: document.getElementById('evNotifEnabled').checked,
+        type: 'dayBefore',
+        time: notifTimeSel==='custom'? (document.getElementById('evNotifCustom').value || state.settings.notifDefaultTime) : notifTimeSel
+      }
+    };
+    if(ev.id){ state.events = state.events.map(x=>x.id===ev.id?newEv:x); }
+    else state.events.push(newEv);
+    persist(); closeModal(); toast('일정을 저장했어요.'); render();
+  };
+}
+async function downloadAttachment(id, name){
+  const rec = await idbGet(id);
+  if(!rec){ toast('첨부파일을 찾을 수 없어요. (다른 기기에서 추가된 파일은 이 기기에 없을 수 있어요)'); return; }
+  const blob = new Blob([rec.data], {type: rec.type||'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name || rec.name || 'attachment';
+  a.target = '_blank';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 3000);
+}
+function bindAttachRemove(){
+  document.querySelectorAll('[data-remove-att]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.removeAtt;
+      window._pendingAttachments = window._pendingAttachments.filter(a=>a.id!==id);
+      idbDelete(id);
+      btn.closest('.attach-item').remove();
+    };
+  });
+  bindAttachOpen();
+}
+function bindAttachOpen(){
+  document.querySelectorAll('[data-open-att]').forEach(el=>{
+    el.onclick = ()=> downloadAttachment(el.dataset.openAtt, el.dataset.attName);
+  });
+}
+
+function openEventDetail(id){
+  const ev = state.events.find(e=>e.id===id);
+  if(!ev) return;
+  openEventModal(ev.date, ev);
+}
+
+/* ---------------- 확인 모달 ---------------- */
+function openConfirm(msg, onYes){
+  openModal(`
+    <h3>확인</h3>
+    <p style="font-size:14px; color:var(--sub);">${esc(msg)}</p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cfNo">취소</button>
+      <button class="btn danger" id="cfYes">확인</button>
+    </div>
+  `);
+  document.getElementById('cfNo').onclick = closeModal;
+  document.getElementById('cfYes').onclick = ()=>{ closeModal(); onYes(); };
+}
+
+/* ---------------- 교시(시간표) 수정 모달 ---------------- */
+function openPeriodModal(dateStr, period, mode){
+  // mode: 'day' (특정 날짜에서 열림, 선택지 제공) | 'recurring' (시간표 화면, 반복만 수정)
+  const {periods} = getScheduleForDate(dateStr||todayStr());
+  const existing = (periods||[]).find(p=>String(p.period)===String(period));
+  const dow = mode==='recurring' ? scheduleDow : dowOf(dateStr);
+  const rec = (state.schedule[dow]||[]).find(p=>String(p.period)===String(period));
+  const base = existing || rec || {period: period||'', subject:'', teacher:'', startTime:'', endTime:''};
+  openModal(`
+    <h3>${period?period+'교시':'새 교시'} 수정</h3>
+    <div class="field"><label>교시</label><input type="number" id="pfPeriod" min="1" value="${base.period||''}"></div>
+    <div class="field"><label>과목</label><input id="pfSubject" value="${esc(base.subject||'')}"></div>
+    <div class="field"><label>선생님</label><input id="pfTeacher" value="${esc(base.teacher||'')}"></div>
+    <div class="row2">
+      <div class="field"><label>시작 시간</label><input type="time" id="pfStart" value="${base.startTime||''}"></div>
+      <div class="field"><label>종료 시간</label><input type="time" id="pfEnd" value="${base.endTime||''}"></div>
+    </div>
+    ${mode==='day' ? `
+    <div class="hint">이 변경을 어떻게 적용할까요?</div>
+    <div class="choice-row">
+      <button class="btn ghost sm" id="pfThisDay">이 날짜만 변경</button>
+      <button class="btn ghost sm" id="pfRecurring">이 요일의 반복 시간표 변경</button>
+    </div>` : ''}
+    <div class="modal-actions">
+      ${existing||rec ? `<button class="btn danger" id="pfDelete">삭제</button>`:''}
+      <button class="btn ghost" id="pfCancel">취소</button>
+      ${mode!=='day' ? `<button class="btn" id="pfSave">저장</button>` : ''}
+    </div>
+  `);
+  document.getElementById('pfCancel').onclick = closeModal;
+  function collect(){
+    return {
+      period: Number(document.getElementById('pfPeriod').value),
+      subject: document.getElementById('pfSubject').value.trim(),
+      teacher: document.getElementById('pfTeacher').value.trim(),
+      startTime: document.getElementById('pfStart').value,
+      endTime: document.getElementById('pfEnd').value
+    };
+  }
+  function saveThisDay(){
+    const data = collect();
+    const list = (state.overrides[dateStr] || (getScheduleForDate(dateStr).periods.slice())).filter(p=>String(p.period)!==String(period));
+    list.push(data);
+    state.overrides[dateStr] = list;
+    persist(); closeModal(); toast('이 날짜의 시간표를 변경했어요.'); render();
+  }
+  function saveRecurring(){
+    const data = collect();
+    const targetDow = mode==='recurring' ? scheduleDow : dowOf(dateStr);
+    const list = (state.schedule[targetDow]||[]).filter(p=>String(p.period)!==String(period));
+    list.push(data);
+    state.schedule[targetDow] = list;
+    persist(); closeModal(); toast('반복 시간표를 변경했어요. (기존 예외 날짜는 유지됩니다)'); render();
+  }
+  if(mode==='day'){
+    document.getElementById('pfThisDay').onclick = saveThisDay;
+    document.getElementById('pfRecurring').onclick = saveRecurring;
+  } else {
+    document.getElementById('pfSave').onclick = saveRecurring;
+  }
+  const delBtn = document.getElementById('pfDelete');
+  if(delBtn) delBtn.onclick = ()=>{
+    if(mode==='day'){
+      openModal(`
+        <h3>삭제 방식 선택</h3>
+        <p style="font-size:14px;color:var(--sub);">이 날짜의 예외만 삭제할지, 반복 시간표를 삭제할지 선택하세요.</p>
+        <div class="modal-actions">
+          <button class="btn ghost" id="delOverride">이 날짜 예외 삭제</button>
+          <button class="btn danger" id="delRecurring">반복 시간표 삭제</button>
+        </div>`);
+      document.getElementById('delOverride').onclick = ()=>{
+        if(state.overrides[dateStr]) state.overrides[dateStr] = state.overrides[dateStr].filter(p=>String(p.period)!==String(period));
+        persist(); closeModal(); toast('예외 시간표를 삭제했어요.'); render();
+      };
+      document.getElementById('delRecurring').onclick = ()=>{
+        state.schedule[dow] = (state.schedule[dow]||[]).filter(p=>String(p.period)!==String(period));
+        persist(); closeModal(); toast('반복 시간표를 삭제했어요.'); render();
+      };
+    } else {
+      openConfirm('이 교시를 반복 시간표에서 삭제할까요?', ()=>{
+        state.schedule[scheduleDow] = (state.schedule[scheduleDow]||[]).filter(p=>String(p.period)!==String(period));
+        persist(); toast('삭제했어요.'); render();
+      });
+    }
+  };
+}
+
+/* ---------------- 날짜 상세 모달 (캘린더에서 날짜 클릭) ---------------- */
+function openDayDetail(dateStr){
+  const {periods} = getScheduleForDate(dateStr);
+  const nextPeriod = periods.length? Math.max(...periods.map(p=>p.period))+1 : 1;
+  openModal(`
+    <h3>${fmtKrDate(dateStr)}</h3>
+    <div class="section-title" style="margin-top:0;">시간표</div>
+    ${renderDaySchedule(dateStr)}
+    <div style="margin-top:8px;"><button class="btn ghost sm" id="dayAddPeriod">+ 이 날짜에만 교시 추가 (학교 행사 등)</button></div>
+    <div class="section-title">급식</div>
+    ${renderMealBlock(dateStr)}
+    <div class="section-title">일정</div>
+    ${renderEventsBlock(dateStr)}
+    <div class="modal-actions">
+      <button class="btn ghost" id="dayClose">닫기</button>
+      <button class="btn" id="dayAddEvent">+ 이 날짜에 일정 추가</button>
+    </div>
+  `);
+  document.getElementById('dayClose').onclick = closeModal;
+  document.getElementById('dayAddEvent').onclick = ()=>{ closeModal(); openEventModal(dateStr); };
+  document.getElementById('dayAddPeriod').onclick = ()=>{ closeModal(); openPeriodModal(dateStr, nextPeriod, 'day'); };
+  document.querySelectorAll('[data-open-period]').forEach(el=>{
+    el.onclick = ()=> { closeModal(); openPeriodModal(el.dataset.date, el.dataset.openPeriod, 'day'); };
+  });
+  document.querySelectorAll('[data-open-event]').forEach(el=>{
+    el.onclick = ()=> { closeModal(); openEventDetail(el.dataset.openEvent); };
+  });
+}
+
+/* ---------------- 급식 입력/수정 모달 ---------------- */
+function openMealModal(dateStr){
+  const m = mealOnDate(dateStr) || {meals:[],allergy:'',nutrition:'',origin:'',note:''};
+  openModal(`
+    <h3>${fmtMD(dateStr)} 급식 ${mealOnDate(dateStr)?'수정':'추가'}</h3>
+    <div class="field"><label>날짜</label><input type="date" id="mfDate" value="${dateStr}"></div>
+    <div class="field"><label>메뉴 (한 줄에 하나씩)</label><textarea id="mfMeals" placeholder="쌀밥&#10;된장찌개&#10;닭갈비">${(m.meals||[]).join('\n')}</textarea></div>
+    <div class="field"><label>알레르기 정보</label><input id="mfAllergy" value="${esc(m.allergy||'')}"></div>
+    <div class="field"><label>영양 정보</label><input id="mfNutrition" value="${esc(m.nutrition||'')}"></div>
+    <div class="field"><label>원산지 정보</label><input id="mfOrigin" value="${esc(m.origin||'')}"></div>
+    <div class="field"><label>메모</label><textarea id="mfNote">${esc(m.note||'')}</textarea></div>
+    <div class="modal-actions">
+      ${mealOnDate(dateStr)? `<button class="btn danger" id="mfDelete">삭제</button>`:''}
+      <button class="btn ghost" id="mfCancel">취소</button>
+      <button class="btn" id="mfSave">저장</button>
+    </div>
+  `);
+  document.getElementById('mfCancel').onclick = closeModal;
+  const delBtn = document.getElementById('mfDelete');
+  if(delBtn) delBtn.onclick = ()=>{
+    delete state.meals[dateStr]; persist(); closeModal(); toast('급식 정보를 삭제했어요.'); render();
+  };
+  document.getElementById('mfSave').onclick = ()=>{
+    const date = document.getElementById('mfDate').value || dateStr;
+    const meals = document.getElementById('mfMeals').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    state.meals[date] = {
+      date, meals,
+      allergy: document.getElementById('mfAllergy').value.trim(),
+      nutrition: document.getElementById('mfNutrition').value.trim(),
+      origin: document.getElementById('mfOrigin').value.trim(),
+      note: document.getElementById('mfNote').value.trim()
+    };
+    persist(); closeModal(); toast('급식 정보를 저장했어요.'); render();
+  };
+}
+
+/* ---------------- 시간표 설정 마법사 ---------------- */
+function openWizard(){
+  const dowLabel = {mon:'월',tue:'화',wed:'수',thu:'목',fri:'금'};
+  openModal(`
+    <h3>시간표 설정 마법사</h3>
+    <div class="hint" style="margin-bottom:10px;">요일별로 몇 교시까지 있는지 입력한 뒤, [시간표] 메뉴에서 과목을 채워 넣으세요.</div>
+    ${WEEKDAYS.map(d=>`
+      <div class="field"><label>${dowLabel[d]}요일 교시 수</label>
+        <input type="number" min="0" max="12" id="wz_${d}" value="${(state.schedule[d]||[]).length || state.settings.periodCount}">
+      </div>`).join('')}
+    <div class="modal-actions">
+      <button class="btn ghost" id="wzCancel">취소</button>
+      <button class="btn" id="wzSave">만들기</button>
+    </div>
+  `);
+  document.getElementById('wzCancel').onclick = closeModal;
+  document.getElementById('wzSave').onclick = ()=>{
+    WEEKDAYS.forEach(d=>{
+      const n = Number(document.getElementById('wz_'+d).value)||0;
+      const existing = state.schedule[d]||[];
+      const arr = [];
+      for(let p=1;p<=n;p++){
+        const found = existing.find(x=>x.period===p);
+        arr.push(found || {period:p, subject:'', teacher:'', startTime: (state.periodTimes[p]||{}).start||'', endTime:(state.periodTimes[p]||{}).end||''});
+      }
+      state.schedule[d]=arr;
+    });
+    persist(); closeModal(); toast('시간표 틀을 만들었어요. 각 교시를 눌러 과목을 채워보세요.'); setView('schedule');
+  };
+}
+
+/* ---------------- 샘플 데이터 ---------------- */
+function loadSampleData(){
+  if(hasAnySchedule() || Object.keys(state.meals).length>0){
+    openConfirm('샘플 데이터를 불러오면 현재 등록된 반복 시간표·급식 정보가 덮어써질 수 있어요. 계속할까요?', doLoadSampleData);
+  } else {
+    doLoadSampleData();
+  }
+}
+function doLoadSampleData(){
+  const subjects = {
+    mon:[['국어','김민수'],['수학','이지훈'],['영어','박서연'],['과학','최지우'],['체육','정우성']],
+    tue:[['과학','최지우'],['국어','김민수'],['수학','이지훈'],['음악','한소영'],['영어','박서연']],
+    wed:[['수학','이지훈'],['국어','김민수'],['체육','정우성'],['미술','오세훈'],['과학','최지우']],
+    thu:[['영어','박서연'],['과학','최지우'],['국어','김민수'],['수학','이지훈'],['체육','정우성']],
+    fri:[['국어','김민수'],['수학','이지훈'],['체육','정우성'],['영어','박서연'],['창체','']]
+  };
+  WEEKDAYS.forEach(d=>{
+    state.schedule[d] = subjects[d].map((s,i)=>{
+      const pt = state.periodTimes[i+1] || defaultPeriodTimes()[i+1];
+      return {period:i+1, subject:s[0], teacher:s[1], startTime:pt.start, endTime:pt.end};
+    });
+  });
+  const t = todayStr();
+  const menus = [
+    ['쌀밥','된장찌개','닭갈비','시금치나물','배추김치'],
+    ['카레라이스','미소국','샐러드','단무지'],
+    ['현미밥','계란국','불고기','콩나물무침','깍두기'],
+    ['볶음밥','우동','탕수육','배추김치'],
+    ['쌀밥','미역국','고등어구이','시금치나물','김치']
+  ];
+  for(let i=-2;i<=4;i++){
+    const ds = addDays(t,i);
+    if(isWeekday(ds)){
+      state.meals[ds] = {date:ds, meals: menus[((parseDate(ds).getDay()+5)%5)], allergy:'(샘플) 5,6,15', nutrition:'', origin:'', note:'샘플 데이터'};
+    }
+  }
+  state.events.push({
+    id:uid(), date:addDays(t,1), title:'(샘플) 수학 과제 제출', description:'수학 문제집 30~40쪽 제출',
+    period:2, startTime:'', endTime:'', attachments:[], notification:{enabled:true,type:'dayBefore',time:state.settings.notifDefaultTime}
+  });
+  state.events.push({
+    id:uid(), date:t, title:'(샘플) 과학 수행평가', description:'화학 반응 실험 보고서 제출',
+    period:4, startTime:'', endTime:'', attachments:[], notification:{enabled:false,type:'dayBefore',time:'20:00'}
+  });
+  persist(); toast('샘플 데이터를 불러왔어요. (제목에 "(샘플)" 표시)'); render();
+}
+
+/* ---------------- 백업/복원/초기화 ---------------- */
+function exportData(){
+  const data = { schedule:state.schedule, overrides:state.overrides, events:state.events, meals:state.meals, settings:state.settings, periodTimes:state.periodTimes };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `schoolendar-backup-${todayStr()}.json`;
+  a.click();
+  toast('데이터를 내보냈어요.');
+}
+function importData(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.schedule) state.schedule = data.schedule;
+      if(data.overrides) state.overrides = data.overrides;
+      if(data.events) state.events = data.events;
+      if(data.meals) state.meals = data.meals;
+      if(data.settings) state.settings = {...state.settings, ...data.settings};
+      if(data.periodTimes) state.periodTimes = data.periodTimes;
+      persist(); toast('데이터를 가져왔어요.'); render();
+    }catch(err){ toast('가져오기에 실패했어요. 파일을 확인해주세요.'); }
+  };
+  reader.readAsText(file);
+}
+function resetAll(){
+  openConfirm('모든 데이터를 초기화할까요? 이 작업은 되돌릴 수 없어요.', ()=>{
+    localStorage.clear();
+    if(idb){ const tx=idb.transaction('attachments','readwrite'); tx.objectStore('attachments').clear(); }
+    location.reload();
+  });
+}
+
+/* ---------------- 카카오톡 "나에게 보내기" 연동 ---------------- */
+/* Kakao JavaScript SDK 사용. 서버 없이 사용자의 카카오 로그인만으로 "나와의 채팅"에 메시지를 보낼 수 있음.
+   (임의의 단체 채팅방으로의 자동 전송은 카카오 정책상 봇/서버 승인 없이는 불가능) */
+function loadKakaoSDK(){
+  return new Promise((resolve,reject)=>{
+    if(window.Kakao){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js';
+    s.onload = ()=>resolve();
+    s.onerror = ()=>reject();
+    document.head.appendChild(s);
+  });
+}
+async function kakaoInit(){
+  const key = state.settings.kakaoKey.trim();
+  if(!key){ toast('Kakao JavaScript 키를 입력해주세요.'); return; }
+  try{
+    await loadKakaoSDK();
+    if(!window.Kakao.isInitialized()) window.Kakao.init(key);
+    toast('카카오 SDK에 연결했어요.');
+  }catch(e){ toast('카카오 SDK 로드에 실패했어요. 네트워크를 확인해주세요.'); }
+}
+async function kakaoInitSilent(){
+  // 새로고침/재방문 시 알림에서 자동으로 카카오톡을 보낼 수 있도록, 토스트 없이 SDK만 조용히 재연결
+  const key = (state.settings.kakaoKey||'').trim();
+  if(!key || !state.settings.kakaoLinked) return;
+  try{
+    await loadKakaoSDK();
+    if(!window.Kakao.isInitialized()) window.Kakao.init(key);
+  }catch(e){ /* 네트워크 문제 시 다음 알림에서 재시도 */ }
+}
+function kakaoLogin(){
+  if(!window.Kakao || !window.Kakao.isInitialized()){ toast('먼저 SDK를 연결해주세요.'); return; }
+  window.Kakao.Auth.login({
+    success: ()=>{ state.settings.kakaoLinked = true; persist(); toast('카카오 로그인 완료!'); render(); },
+    fail: ()=>{ toast('카카오 로그인에 실패했어요.'); }
+  });
+}
+function kakaoSendToMe(title, body){
+  if(!window.Kakao || !window.Kakao.isInitialized() || !state.settings.kakaoLinked){
+    toast('카카오 로그인이 필요해요. 설정에서 연결해주세요.'); return;
+  }
+  window.Kakao.API.request({
+    url:'/v2/api/talk/memo/default/send',
+    data:{
+      template_object: JSON.stringify({
+        object_type:'text',
+        text:`[${title}]\n${body}`,
+        link:{ web_url:'https://developers.kakao.com', mobile_web_url:'https://developers.kakao.com' }
+      })
+    }
+  }).then(()=>toast('카카오톡으로 안내문자를 보냈어요.'))
+    .catch(()=>toast('카카오톡 전송에 실패했어요.'));
+}
+
+/* ---------------- 기기 간 동기화 (Firebase Authentication + Firestore REST API) ----------------
+   이제는 "누구나 아는 코드" 대신 실제 로그인 계정(이메일/비밀번호)으로 데이터를 보호한다.
+   - Firebase Authentication(REST: Identity Toolkit)으로 로그인 → idToken 발급
+   - idToken을 Authorization 헤더에 실어 Firestore REST API 호출
+   - Firestore 문서 경로는 로그인한 사용자의 uid로 고정 (schoolendar-sync/{uid})
+   - 보안 규칙 예시:
+       match /databases/{db}/documents {
+         match /schoolendar-sync/{uid} {
+           allow read, write: if request.auth != null && request.auth.uid == uid;
+         }
+       }
+     이 규칙을 쓰면 본인 계정으로 로그인한 사람만 자신의 문서를 읽고 쓸 수 있다.
+   - idToken은 1시간 후 만료되므로 만료 시 refreshToken으로 자동 갱신한다.
+   - 첨부파일(실제 문서 바이너리)은 용량 문제로 동기화 대상에서 제외되며, 기기별로만 보관된다.
+------------------------------------------------------------------------- */
+const SYNC_COLLECTION = 'schoolendar-sync';
+
+function authState(){ return state.settings.auth || null; } // {email, uid, idToken, refreshToken, expiresAt}
+
+async function authSignUp(email, password){
+  const {syncApiKey} = state.settings;
+  if(!syncApiKey) return {ok:false, reason:'no-key'};
+  try{
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(syncApiKey)}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password, returnSecureToken:true})
+    });
+    const data = await res.json();
+    if(!res.ok) return {ok:false, reason: data.error?.message || 'error'};
+    saveAuth(data);
+    return {ok:true};
+  }catch(e){ return {ok:false, reason:'network'}; }
+}
+async function authSignIn(email, password){
+  const {syncApiKey} = state.settings;
+  if(!syncApiKey) return {ok:false, reason:'no-key'};
+  try{
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(syncApiKey)}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password, returnSecureToken:true})
+    });
+    const data = await res.json();
+    if(!res.ok) return {ok:false, reason: data.error?.message || 'error'};
+    saveAuth(data);
+    return {ok:true};
+  }catch(e){ return {ok:false, reason:'network'}; }
+}
+function saveAuth(data){
+  state.settings.auth = {
+    email: data.email,
+    uid: data.localId,
+    idToken: data.idToken,
+    refreshToken: data.refreshToken,
+    expiresAt: Date.now() + (Number(data.expiresIn||3600)*1000)
+  };
+  persist();
+}
+async function authRefreshIfNeeded(){
+  const a = authState();
+  if(!a) return null;
+  if(Date.now() < a.expiresAt - 60000) return a; // 아직 유효
+  try{
+    const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(state.settings.syncApiKey)}`,{
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(a.refreshToken)}`
+    });
+    const data = await res.json();
+    if(!res.ok) return null;
+    state.settings.auth = {
+      email: a.email, uid: data.user_id,
+      idToken: data.id_token, refreshToken: data.refresh_token,
+      expiresAt: Date.now() + (Number(data.expires_in||3600)*1000)
+    };
+    persist();
+    return state.settings.auth;
+  }catch(e){ return null; }
+}
+function authSignOut(){
+  state.settings.auth = null;
+  persist();
+}
+
+function syncReady(){
+  return !!(state.settings.syncEnabled && state.settings.syncProjectId && authState());
+}
+function syncDocUrl(uid){
+  const {syncProjectId} = state.settings;
+  return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(syncProjectId)}/databases/(default)/documents/${SYNC_COLLECTION}/${encodeURIComponent(uid)}`;
+}
+function buildSyncPayload(){
+  // 기기별 개인정보(카카오 키, 로그인 토큰, 동기화 설정 자체)는 동기화 대상에서 제외
+  const {kakaoKey, kakaoLinked, syncEnabled, syncProjectId, syncApiKey, auth, ...syncableSettings} = state.settings;
+  return {
+    schedule: state.schedule,
+    overrides: state.overrides,
+    events: state.events, // 첨부파일은 메타데이터(이름)만 포함, 실제 파일 바이너리는 제외
+    meals: state.meals,
+    periodTimes: state.periodTimes,
+    settings: syncableSettings,
+    updatedAt: state.updatedAt
+  };
+}
+async function syncPush(){
+  if(!syncReady()) return {ok:false, reason:'not-configured'};
+  const a = await authRefreshIfNeeded();
+  if(!a) return {ok:false, reason:'auth-expired'};
+  try{
+    const payload = buildSyncPayload();
+    const body = { fields: {
+      data: { stringValue: JSON.stringify(payload) },
+      updatedAt: { integerValue: String(state.updatedAt) }
+    }};
+    const res = await fetch(syncDocUrl(a.uid), {
+      method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.idToken}, body: JSON.stringify(body)
+    });
+    if(!res.ok) return {ok:false, reason:'http-'+res.status};
+    return {ok:true};
+  }catch(e){ return {ok:false, reason:'network'}; }
+}
+async function syncPull(){
+  if(!(state.settings.syncProjectId && authState())) return {ok:false, reason:'not-configured'};
+  const a = await authRefreshIfNeeded();
+  if(!a) return {ok:false, reason:'auth-expired'};
+  try{
+    const res = await fetch(syncDocUrl(a.uid), { headers:{'Authorization':'Bearer '+a.idToken} });
+    if(res.status===404) return {ok:false, reason:'no-doc'};
+    if(!res.ok) return {ok:false, reason:'http-'+res.status};
+    const doc = await res.json();
+    const raw = doc.fields && doc.fields.data && doc.fields.data.stringValue;
+    if(!raw) return {ok:false, reason:'empty'};
+    const payload = JSON.parse(raw);
+    return {ok:true, payload};
+  }catch(e){ return {ok:false, reason:'network'}; }
+}
+function applyCloudPayload(payload){
+  state.schedule = payload.schedule || state.schedule;
+  state.overrides = payload.overrides || state.overrides;
+  state.events = payload.events || state.events;
+  state.meals = payload.meals || state.meals;
+  state.periodTimes = payload.periodTimes || state.periodTimes;
+  state.settings = {...state.settings, ...(payload.settings||{})};
+  state.updatedAt = payload.updatedAt || state.updatedAt;
+  Store.save(LS.schedule, state.schedule);
+  Store.save(LS.overrides, state.overrides);
+  Store.save(LS.events, state.events);
+  Store.save(LS.meals, state.meals);
+  Store.save(LS.periodTimes, state.periodTimes);
+  Store.save(LS.settings, state.settings);
+  Store.save('sch_updatedAt', state.updatedAt);
+}
+let _pushTimer = null;
+function schedulePush(){
+  if(!syncReady()) return;
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(()=>{ syncPush(); }, 2500);
+}
+async function syncNow(direction){ // 'up' | 'down'
+  if(!authState()){ toast('먼저 계정에 로그인해주세요.'); return; }
+  if(!state.settings.syncProjectId){ toast('Firebase 프로젝트 ID를 입력해주세요.'); return; }
+  if(direction==='up'){
+    toast('업로드 중...');
+    const r = await syncPush();
+    toast(r.ok? '클라우드로 업로드했어요.' : '업로드에 실패했어요. 설정을 확인해주세요.');
+  } else {
+    toast('불러오는 중...');
+    const r = await syncPull();
+    if(r.ok){ applyCloudPayload(r.payload); toast('다른 기기의 데이터를 불러왔어요.'); render(); }
+    else toast(r.reason==='no-doc' ? '아직 업로드된 데이터가 없어요. 먼저 업로드해보세요.' : '불러오기에 실패했어요.');
+  }
+}
+async function syncOnBoot(){
+  if(!syncReady()) return;
+  const r = await syncPull();
+  if(!r.ok) return; // 문서가 없거나 네트워크 실패 시 로컬 데이터로 계속 진행
+  if((r.payload.updatedAt||0) > (state.updatedAt||0)){
+    applyCloudPayload(r.payload);
+    toast('다른 기기에서 최근에 저장한 데이터를 불러왔어요.');
+    render();
+  } else if((state.updatedAt||0) > (r.payload.updatedAt||0)){
+    syncPush(); // 이 기기가 더 최신이면 클라우드를 갱신
+  }
+}
+
+/* ---------------- 알림 엔진 ---------------- */
+/* 앱이 열려 있는 동안 1분마다 오늘 발송 대상 알림을 확인해 인앱 알림센터 + (권한 있으면) 브라우저 알림 + (연동 시) 카카오톡으로 전송.
+   백엔드가 없으므로 앱이 닫혀 있을 때는 발송할 수 없다는 한계가 있음. */
+function buildTomorrowSummary(dateForNotif){ // dateForNotif = 알림이 발생하는 "다음날" 날짜
+  const {periods} = getScheduleForDate(dateForNotif);
+  const sorted = [...periods].sort((a,b)=>a.period-b.period);
+  const schLines = sorted.length? sorted.map(p=>`${p.period}교시 ${p.subject}`).join('\n') : '시간표가 설정되지 않았습니다.';
+  return schLines;
+}
+function checkAndFireNotifications(){
+  const now = new Date();
+  const nowHM = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const today = todayStr();
+
+  // 일정 알림: 오늘이 "일정 날짜의 전날"이고, 알림 시간이 지금(분 단위)과 일치
+  state.events.forEach(ev=>{
+    if(!ev.notification || !ev.notification.enabled) return;
+    const targetDate = addDays(ev.date,-1); // 전날
+    if(targetDate!==today) return;
+    if(ev.notification.time!==nowHM) return;
+    const logId = 'ev_'+ev.id+'_'+ev.date;
+    if(state.notifLog.some(n=>n.id===logId)) return;
+    const schLines = buildTomorrowSummary(ev.date);
+    const body = `내일 일정: ${ev.title}${ev.period?`\n관련 교시: ${ev.period}교시`:''}\n일정 내용: ${ev.description||'-'}\n\n내일 시간표\n${schLines}`;
+    fireNotification(logId, `내일 일정 알림 · ${fmtMD(ev.date)}`, body);
+  });
+
+  // 급식 알림
+  if(state.settings.mealNotifEnabled){
+    const tomorrow = addDays(today,1);
+    if(state.settings.mealNotifTime===nowHM){
+      const logId = 'meal_'+tomorrow;
+      if(!state.notifLog.some(n=>n.id===logId)){
+        const m = mealOnDate(tomorrow);
+        if(m && m.meals && m.meals.length){
+          fireNotification(logId, `내일 급식 알림 · ${fmtMD(tomorrow)}`, m.meals.join('\n'));
+        }
+      }
+    }
+  }
+}
+function fireNotification(id, title, body){
+  state.notifLog.push({id, title, body, time:new Date().toLocaleString('ko-KR'), read:false});
+  persist();
+  if('Notification' in window && Notification.permission==='granted'){
+    new Notification(title, {body});
+  }
+  if(state.settings.kakaoLinked) kakaoSendToMe(title, body);
+  updateNotifBadge();
+  if(currentView==='notif' || currentView==='today') render();
+}
+setInterval(checkAndFireNotifications, 30000);
+
+/* ---------------- 이벤트 바인딩 ---------------- */
+function bindDynamicHandlers(){
+  document.querySelectorAll('[data-open-day]').forEach(el=> el.onclick = ()=>openDayDetail(el.dataset.openDay));
+  document.querySelectorAll('[data-open-meal]').forEach(el=> el.onclick = ()=>openMealModal(el.dataset.openMeal));
+  document.querySelectorAll('[data-edit-meal]').forEach(el=> el.onclick = ()=>openMealModal(el.dataset.editMeal));
+  document.querySelectorAll('[data-open-event]').forEach(el=> el.onclick = ()=>openEventDetail(el.dataset.openEvent));
+  document.querySelectorAll('[data-open-period]').forEach(el=> el.onclick = ()=>openPeriodModal(el.dataset.date, el.dataset.openPeriod, 'day'));
+  document.querySelectorAll('[data-edit-recurring]').forEach(el=> el.onclick = ()=>openPeriodModal(null, el.dataset.editRecurring, 'recurring'));
+  document.querySelectorAll('[data-read-notif]').forEach(el=> el.onclick = ()=>{
+    const n = state.notifLog.find(x=>x.id===el.dataset.readNotif);
+    if(n){ n.read=true; persist(); updateNotifBadge(); el.style.opacity='.6'; }
+  });
+
+  const btnWizard = document.getElementById('btnWizard'); if(btnWizard) btnWizard.onclick = openWizard;
+  const btnWizard2 = document.getElementById('btnWizard2'); if(btnWizard2) btnWizard2.onclick = openWizard;
+  const btnSample = document.getElementById('btnSample'); if(btnSample) btnSample.onclick = loadSampleData;
+  const btnSample2 = document.getElementById('btnSample2'); if(btnSample2) btnSample2.onclick = loadSampleData;
+  const btnSample3 = document.getElementById('btnSample3'); if(btnSample3) btnSample3.onclick = loadSampleData;
+  const btnAddPeriod = document.getElementById('btnAddPeriod');
+  if(btnAddPeriod) btnAddPeriod.onclick = ()=>{
+    const list = state.schedule[scheduleDow]||[];
+    const next = list.length? Math.max(...list.map(p=>p.period))+1 : 1;
+    openPeriodModal(null, next, 'recurring');
+  };
+  const btnAddMeal = document.getElementById('btnAddMeal'); if(btnAddMeal) btnAddMeal.onclick = ()=>openMealModal(todayStr());
+
+  document.querySelectorAll('[data-calmode]').forEach(b=> b.onclick = ()=>{ calMode=b.dataset.calmode; render(); });
+  document.querySelectorAll('[data-schdow]').forEach(b=> b.onclick = ()=>{ scheduleDow=b.dataset.schdow; render(); });
+  document.querySelectorAll('[data-mealtab]').forEach(b=> b.onclick = ()=>{ mealTab=b.dataset.mealtab; render(); });
+  const mwPrev=document.getElementById('mealWeekPrev'), mwNext=document.getElementById('mealWeekNext'), mwToday=document.getElementById('mealWeekToday');
+  if(mwPrev) mwPrev.onclick = ()=>{ calAnchor = addDays(calAnchor,-7); render(); };
+  if(mwNext) mwNext.onclick = ()=>{ calAnchor = addDays(calAnchor,7); render(); };
+  if(mwToday) mwToday.onclick = ()=>{ calAnchor = todayStr(); render(); };
+  const mmPrev=document.getElementById('mealMonthPrev'), mmNext=document.getElementById('mealMonthNext'), mmToday=document.getElementById('mealMonthToday');
+  if(mmPrev) mmPrev.onclick = ()=>{ calAnchor = fmtDate(new Date(parseDate(calAnchor).getFullYear(),parseDate(calAnchor).getMonth()-1,1)); render(); };
+  if(mmNext) mmNext.onclick = ()=>{ calAnchor = fmtDate(new Date(parseDate(calAnchor).getFullYear(),parseDate(calAnchor).getMonth()+1,1)); render(); };
+  if(mmToday) mmToday.onclick = ()=>{ calAnchor = todayStr(); render(); };
+
+  const calPrev=document.getElementById('calPrev'), calNext=document.getElementById('calNext'), calToday=document.getElementById('calToday');
+  if(calPrev) calPrev.onclick = ()=>{ calAnchor = calMode==='month'? fmtDate(new Date(parseDate(calAnchor).getFullYear(),parseDate(calAnchor).getMonth()-1,1)) : addDays(calAnchor, calMode==='week'?-7:-1); render(); };
+  if(calNext) calNext.onclick = ()=>{ calAnchor = calMode==='month'? fmtDate(new Date(parseDate(calAnchor).getFullYear(),parseDate(calAnchor).getMonth()+1,1)) : addDays(calAnchor, calMode==='week'?7:1); render(); };
+  if(calToday) calToday.onclick = ()=>{ calAnchor = todayStr(); render(); };
+
+  const searchInput = document.getElementById('searchInput');
+  if(searchInput) searchInput.addEventListener('input', ()=>{ document.getElementById('eventsListResult').innerHTML = renderEventSearchResults(searchInput.value); document.querySelectorAll('[data-open-event]').forEach(el=> el.onclick = ()=>openEventDetail(el.dataset.openEvent)); });
+
+  // 설정
+  const setPeriodCount = document.getElementById('setPeriodCount');
+  if(setPeriodCount) setPeriodCount.onchange = ()=>{ state.settings.periodCount = Number(setPeriodCount.value)||6; persist(); };
+  const setNotifTime = document.getElementById('setNotifTime');
+  if(setNotifTime) setNotifTime.onchange = ()=>{
+    document.getElementById('customNotifWrap').style.display = setNotifTime.value==='custom'?'block':'none';
+    if(setNotifTime.value!=='custom'){ state.settings.notifDefaultTime = setNotifTime.value; persist(); }
+  };
+  const setNotifCustom = document.getElementById('setNotifCustom');
+  if(setNotifCustom) setNotifCustom.onchange = ()=>{ state.settings.notifDefaultTime = setNotifCustom.value; persist(); };
+  const setMealNotif = document.getElementById('setMealNotif');
+  if(setMealNotif) setMealNotif.onchange = ()=>{ state.settings.mealNotifEnabled = setMealNotif.checked; persist(); };
+  const setMealNotifTime = document.getElementById('setMealNotifTime');
+  if(setMealNotifTime) setMealNotifTime.onchange = ()=>{ state.settings.mealNotifTime = setMealNotifTime.value; persist(); };
+  const btnReqPerm = document.getElementById('btnReqNotifPerm');
+  if(btnReqPerm) btnReqPerm.onclick = ()=>{
+    if('Notification' in window) Notification.requestPermission().then(p=>toast(p==='granted'?'알림이 허용되었어요.':'알림이 거부되었어요. 인앱 알림센터는 계속 사용할 수 있어요.'));
+    else toast('이 브라우저는 알림 기능을 지원하지 않아요.');
+  };
+  const setKakaoKey = document.getElementById('setKakaoKey');
+  if(setKakaoKey) setKakaoKey.onchange = ()=>{ state.settings.kakaoKey = setKakaoKey.value.trim(); persist(); };
+  const btnKakaoInit = document.getElementById('btnKakaoInit'); if(btnKakaoInit) btnKakaoInit.onclick = kakaoInit;
+  const btnKakaoLogin = document.getElementById('btnKakaoLogin'); if(btnKakaoLogin) btnKakaoLogin.onclick = kakaoLogin;
+  const btnKakaoTest = document.getElementById('btnKakaoTest'); if(btnKakaoTest) btnKakaoTest.onclick = ()=>kakaoSendToMe('테스트 알림','스쿨랜더에서 보낸 테스트 메시지예요 🎒');
+
+  const setSyncEnabled = document.getElementById('setSyncEnabled');
+  if(setSyncEnabled) setSyncEnabled.onchange = ()=>{ state.settings.syncEnabled = setSyncEnabled.checked; persist(); if(setSyncEnabled.checked) syncNow('up'); };
+  const setSyncProject = document.getElementById('setSyncProject');
+  if(setSyncProject) setSyncProject.onchange = ()=>{ state.settings.syncProjectId = setSyncProject.value.trim(); persist(); };
+  const setSyncApiKey = document.getElementById('setSyncApiKey');
+  if(setSyncApiKey) setSyncApiKey.onchange = ()=>{ state.settings.syncApiKey = setSyncApiKey.value.trim(); persist(); };
+  const btnSyncUp = document.getElementById('btnSyncUp'); if(btnSyncUp) btnSyncUp.onclick = ()=>syncNow('up');
+  const btnSyncDown = document.getElementById('btnSyncDown'); if(btnSyncDown) btnSyncDown.onclick = ()=>syncNow('down');
+  const btnAuthLogout = document.getElementById('btnAuthLogout'); if(btnAuthLogout) btnAuthLogout.onclick = ()=>{ authSignOut(); toast('로그아웃했어요.'); render(); };
+  const btnAuthSignup = document.getElementById('btnAuthSignup');
+  if(btnAuthSignup) btnAuthSignup.onclick = async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    const pw = document.getElementById('authPassword').value;
+    const errEl = document.getElementById('authErr');
+    if(!state.settings.syncProjectId || !state.settings.syncApiKey){ errEl.textContent='먼저 프로젝트 ID와 API 키를 입력해주세요.'; errEl.style.display='block'; return; }
+    if(!email || pw.length<6){ errEl.textContent='이메일과 6자 이상 비밀번호를 입력해주세요.'; errEl.style.display='block'; return; }
+    toast('계정 생성 중...');
+    const r = await authSignUp(email, pw);
+    if(r.ok){ toast('계정을 만들고 로그인했어요.'); render(); syncNow('up'); }
+    else { errEl.textContent = '계정 생성 실패: '+r.reason; errEl.style.display='block'; }
+  };
+  const btnAuthLogin = document.getElementById('btnAuthLogin');
+  if(btnAuthLogin) btnAuthLogin.onclick = async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    const pw = document.getElementById('authPassword').value;
+    const errEl = document.getElementById('authErr');
+    if(!state.settings.syncProjectId || !state.settings.syncApiKey){ errEl.textContent='먼저 프로젝트 ID와 API 키를 입력해주세요.'; errEl.style.display='block'; return; }
+    toast('로그인 중...');
+    const r = await authSignIn(email, pw);
+    if(r.ok){ toast('로그인했어요.'); render(); syncNow('down'); }
+    else { errEl.textContent = '로그인 실패: '+r.reason; errEl.style.display='block'; }
+  };
+
+  const setDefaultView = document.getElementById('setDefaultView');
+  if(setDefaultView) setDefaultView.onchange = ()=>{ state.settings.defaultView = setDefaultView.value; calMode = setDefaultView.value; persist(); };
+  const setHour24 = document.getElementById('setHour24');
+  if(setHour24) setHour24.onchange = ()=>{ state.settings.hour24 = setHour24.checked; persist(); };
+  const setDark = document.getElementById('setDark');
+  if(setDark) setDark.onchange = ()=>{ state.settings.darkMode = setDark.checked; persist(); document.body.classList.toggle('dark', setDark.checked); };
+
+  const btnExport = document.getElementById('btnExport'); if(btnExport) btnExport.onclick = exportData;
+  const btnImport = document.getElementById('btnImport'); if(btnImport) btnImport.onclick = ()=>document.getElementById('importFile').click();
+  const importFile = document.getElementById('importFile'); if(importFile) importFile.onchange = (e)=>{ if(e.target.files[0]) importData(e.target.files[0]); };
+  const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.onclick = resetAll;
+}
+
+/* ---------------- 전역 버튼 ---------------- */
+document.querySelectorAll('.nav-item,.bottom-nav button').forEach(b=> b.onclick = ()=>setView(b.dataset.view));
+document.getElementById('btnAddEvent').onclick = ()=>openEventModal(currentView==='calendar'?calAnchor:todayStr());
+document.getElementById('btnNotif').onclick = ()=>setView('notif');
+
+/* 키보드 단축키: n=일정추가, t=오늘, /=검색 */
+document.addEventListener('keydown', (e)=>{
+  if(document.getElementById('overlay').classList.contains('show')) return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='n') openEventModal(todayStr());
+  else if(e.key==='t') setView('today');
+  else if(e.key==='/'){ e.preventDefault(); setView('events'); setTimeout(()=>document.getElementById('searchInput')?.focus(),50); }
+});
+
+/* ---------------- 초기화 ---------------- */
+async function boot(){
+  await initDB();
+  if(state.settings.darkMode) document.body.classList.add('dark');
+  calMode = state.settings.defaultView || 'month';
+  kakaoInitSilent();
+  await syncOnBoot();
+  setView('today');
+  checkAndFireNotifications();
+}
+boot();
+</script>
+</body>
+</html>
