@@ -340,6 +340,7 @@ let state = {
     darkMode: false,
     kakaoKey: '',
     kakaoLinked: false,
+    kakaoToken: null,
     syncEnabled: false,
     syncProjectId: '',
     syncApiKey: '',
@@ -1377,25 +1378,77 @@ async function kakaoInit(){
   }catch(e){ toast('카카오 SDK 로드에 실패했어요. 네트워크를 확인해주세요.'); }
 }
 async function kakaoInitSilent(){
-  // 새로고침/재방문 시 알림에서 자동으로 카카오톡을 보낼 수 있도록, 토스트 없이 SDK만 조용히 재연결
+  // 새로고침/재방문 시 알림에서 자동으로 카카오톡을 보낼 수 있도록, 토스트 없이 SDK만 조용히 재연결하고 토큰을 복원
   const key = (state.settings.kakaoKey||'').trim();
   if(!key || !state.settings.kakaoLinked) return;
   try{
     await loadKakaoSDK();
     if(!window.Kakao.isInitialized()) window.Kakao.init(key);
+    await ensureKakaoToken();
   }catch(e){ /* 네트워크 문제 시 다음 알림에서 재시도 */ }
 }
-function kakaoLogin(){
-  if(!window.Kakao || !window.Kakao.isInitialized()){ toast('먼저 SDK를 연결해주세요.'); return; }
-  window.Kakao.Auth.login({
-    success: ()=>{ state.settings.kakaoLinked = true; persist(); toast('카카오 로그인 완료!'); render(); },
-    fail: ()=>{ toast('카카오 로그인에 실패했어요.'); }
-  });
+function kakaoRedirectUri(){
+  // 쿼리스트링(?code=...) 없이 현재 페이지 주소만 사용 — Kakao Developers > 카카오 로그인 > Redirect URI에 이 주소를 정확히 등록해야 함
+  return location.origin + location.pathname;
 }
-function kakaoSendToMe(title, body){
+async function kakaoLogin(){
+  if(!window.Kakao || !window.Kakao.isInitialized()){ toast('먼저 SDK를 연결해주세요.'); return; }
+  // 최신 Kakao SDK는 팝업 로그인(Auth.login)을 지원하지 않고, 페이지 이동(리다이렉트) 방식만 지원한다.
+  // 로그인 동의 후 Kakao가 이 페이지로 다시 돌려보내며 주소 끝에 ?code=... 를 붙여준다.
+  window.Kakao.Auth.authorize({ redirectUri: kakaoRedirectUri(), scope: 'talk_message' });
+}
+async function handleKakaoRedirect(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if(!code) return;
+  const redirectUri = kakaoRedirectUri();
+  history.replaceState({}, '', redirectUri); // 새로고침 시 중복 처리 방지를 위해 주소창의 code 제거
+  const key = (state.settings.kakaoKey||'').trim();
+  if(!key){ toast('카카오 JavaScript 키가 설정되어 있지 않아요.'); return; }
+  try{
+    await loadKakaoSDK();
+    if(!window.Kakao.isInitialized()) window.Kakao.init(key);
+    const res = await fetch('https://kauth.kakao.com/oauth/token', {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({ grant_type:'authorization_code', client_id:key, redirect_uri:redirectUri, code })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.access_token){ toast('카카오 로그인 실패: '+(data.error_description||data.error||'알 수 없는 오류')); return; }
+    state.settings.kakaoToken = { accessToken:data.access_token, refreshToken:data.refresh_token, expiresAt: Date.now()+(Number(data.expires_in||21599)*1000) };
+    state.settings.kakaoLinked = true;
+    window.Kakao.Auth.setAccessToken(data.access_token);
+    persist();
+    toast('카카오 로그인 완료!');
+    render();
+  }catch(e){ toast('카카오 로그인 처리 중 오류가 발생했어요.'); }
+}
+async function ensureKakaoToken(){
+  const t = state.settings.kakaoToken;
+  if(!t) return false;
+  if(Date.now() < t.expiresAt - 60000){
+    window.Kakao.Auth.setAccessToken(t.accessToken);
+    return true;
+  }
+  const key = (state.settings.kakaoKey||'').trim();
+  try{
+    const res = await fetch('https://kauth.kakao.com/oauth/token', {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({ grant_type:'refresh_token', client_id:key, refresh_token:t.refreshToken })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.access_token) return false;
+    state.settings.kakaoToken = { accessToken:data.access_token, refreshToken: data.refresh_token || t.refreshToken, expiresAt: Date.now()+(Number(data.expires_in||21599)*1000) };
+    persist();
+    window.Kakao.Auth.setAccessToken(data.access_token);
+    return true;
+  }catch(e){ return false; }
+}
+async function kakaoSendToMe(title, body){
   if(!window.Kakao || !window.Kakao.isInitialized() || !state.settings.kakaoLinked){
     toast('카카오 로그인이 필요해요. 설정에서 연결해주세요.'); return;
   }
+  const ok = await ensureKakaoToken();
+  if(!ok){ toast('카카오 로그인이 만료됐어요. 다시 로그인해주세요.'); return; }
   window.Kakao.API.request({
     url:'/v2/api/talk/memo/default/send',
     data:{
@@ -1500,7 +1553,7 @@ function syncDocUrl(uid){
 }
 function buildSyncPayload(){
   // 기기별 개인정보(카카오 키, 로그인 토큰, 동기화 설정 자체)는 동기화 대상에서 제외
-  const {kakaoKey, kakaoLinked, syncEnabled, syncProjectId, syncApiKey, auth, ...syncableSettings} = state.settings;
+  const {kakaoKey, kakaoLinked, kakaoToken, syncEnabled, syncProjectId, syncApiKey, auth, ...syncableSettings} = state.settings;
   return {
     schedule: state.schedule,
     overrides: state.overrides,
@@ -1781,6 +1834,7 @@ async function boot(){
   await initDB();
   if(state.settings.darkMode) document.body.classList.add('dark');
   calMode = state.settings.defaultView || 'month';
+  await handleKakaoRedirect();
   kakaoInitSilent();
   await syncOnBoot();
   setView('today');
