@@ -1511,11 +1511,11 @@ async function kakaoSendToMe(title, body){
     await window.Kakao.API.request({
       url:'/v2/api/talk/memo/default/send',
       data:{
-        template_object: JSON.stringify({
+        template_object: {
           object_type:'text',
           text:`[${title}]\n${body}`,
           link:{ web_url:'https://developers.kakao.com', mobile_web_url:'https://developers.kakao.com' }
-        })
+        }
       }
     });
     toast('카카오톡으로 안내문자를 보냈어요.');
