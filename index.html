@@ -901,9 +901,10 @@ function renderSettings(){
 
     <div class="section-title">기기 간 동기화</div>
     <div class="card pastel-mint">
-      <div class="switch-row"><span>동기화 사용</span>
+      <div class="switch-row"><span>동기화 사용 (저장할 때마다 자동 업로드)</span>
         <label class="switch"><input type="checkbox" id="setSyncEnabled" ${s.syncEnabled?'checked':''}><span class="slider"></span></label>
       </div>
+      <div class="hint" style="margin:0 0 8px;">이 토글을 꺼둬도 아래 "지금 업로드/불러오기" 버튼은 로그인만 되어 있으면 언제든 수동으로 사용할 수 있어요.</div>
       <div class="field"><label>Firebase 프로젝트 ID</label>
         <input type="text" id="setSyncProject" placeholder="예: my-school-app-1234" value="${esc(s.syncProjectId)}">
       </div>
@@ -1500,22 +1501,28 @@ async function ensureKakaoToken(){
   }catch(e){ return false; }
 }
 async function kakaoSendToMe(title, body){
-  if(!window.Kakao || !window.Kakao.isInitialized() || !state.settings.kakaoLinked){
-    toast('카카오 로그인이 필요해요. 설정에서 연결해주세요.'); return;
-  }
-  const ok = await ensureKakaoToken();
-  if(!ok){ toast('카카오 로그인이 만료됐어요. 다시 로그인해주세요.'); return; }
-  window.Kakao.API.request({
-    url:'/v2/api/talk/memo/default/send',
-    data:{
-      template_object: JSON.stringify({
-        object_type:'text',
-        text:`[${title}]\n${body}`,
-        link:{ web_url:'https://developers.kakao.com', mobile_web_url:'https://developers.kakao.com' }
-      })
+  try{
+    if(!window.Kakao || !window.Kakao.isInitialized() || !state.settings.kakaoLinked){
+      toast('카카오 로그인이 필요해요. 설정에서 연결해주세요.'); return;
     }
-  }).then(()=>toast('카카오톡으로 안내문자를 보냈어요.'))
-    .catch(()=>toast('카카오톡 전송에 실패했어요.'));
+    toast('카카오톡 전송 시도 중...');
+    const ok = await ensureKakaoToken();
+    if(!ok){ toast('카카오 로그인이 만료됐어요. 다시 로그인해주세요.'); return; }
+    await window.Kakao.API.request({
+      url:'/v2/api/talk/memo/default/send',
+      data:{
+        template_object: JSON.stringify({
+          object_type:'text',
+          text:`[${title}]\n${body}`,
+          link:{ web_url:'https://developers.kakao.com', mobile_web_url:'https://developers.kakao.com' }
+        })
+      }
+    });
+    toast('카카오톡으로 안내문자를 보냈어요.');
+  }catch(e){
+    const detail = (e && (e.error_description || e.msg || e.message)) || JSON.stringify(e).slice(0,120);
+    toast('카카오톡 전송 실패: '+detail);
+  }
 }
 
 /* ---------------- 기기 간 동기화 (Firebase Authentication + Firestore REST API) ----------------
@@ -1600,8 +1607,13 @@ function authSignOut(){
   persist();
 }
 
-function syncReady(){
-  return !!(state.settings.syncEnabled && state.settings.syncProjectId && authState());
+function syncConfigured(){
+  // "지금 업로드/불러오기" 같은 수동 동작에 필요한 최소 조건 (동기화 사용 토글은 자동 동작에만 관여)
+  return !!(state.settings.syncProjectId && authState());
+}
+function syncAutoEnabled(){
+  // 백그라운드 자동 업로드/부팅시 자동 동기화는 "동기화 사용" 토글이 켜져 있을 때만
+  return !!(state.settings.syncEnabled && syncConfigured());
 }
 function syncDocUrl(uid){
   const {syncProjectId} = state.settings;
@@ -1621,7 +1633,7 @@ function buildSyncPayload(){
   };
 }
 async function syncPush(){
-  if(!syncReady()) return {ok:false, reason:'not-configured'};
+  if(!syncConfigured()) return {ok:false, reason:'not-configured'};
   const a = await authRefreshIfNeeded();
   if(!a) return {ok:false, reason:'auth-expired'};
   try{
@@ -1678,7 +1690,7 @@ function applyCloudPayload(payload){
 }
 let _pushTimer = null;
 function schedulePush(){
-  if(!syncReady()) return;
+  if(!syncAutoEnabled()) return;
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(()=>{ syncPush(); }, 2500);
 }
@@ -1697,7 +1709,7 @@ async function syncNow(direction){ // 'up' | 'down'
   }
 }
 async function syncOnBoot(){
-  if(!syncReady()) return;
+  if(!syncAutoEnabled()) return;
   const r = await syncPull();
   if(!r.ok) return; // 문서가 없거나 네트워크 실패 시 로컬 데이터로 계속 진행
   if((r.payload.updatedAt||0) > (state.updatedAt||0)){
