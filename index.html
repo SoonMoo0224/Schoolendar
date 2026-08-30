@@ -707,6 +707,14 @@ function renderSchedule(){
         <div class="ptime">${p.startTime} - ${p.endTime}</div>
       </div>`).join('')}</div>`
       : `<div class="empty"><div class="big">📘</div>${dowLabel[scheduleDow]} 시간표가 아직 없어요.</div>`}
+
+    <div class="section-title">특정 날짜만 수정 (학교 행사 등)</div>
+    <div class="card">
+      <div class="hint" style="margin:0 0 10px;">반복 시간표는 그대로 두고, 특정 날짜의 시간표만 임시로 바꾸고 싶을 때 사용하세요. 날짜를 고르면 그날의 시간표 화면이 열리고, 각 교시를 눌러 "이 날짜만 변경"을 선택할 수 있어요.</div>
+      <div class="field" style="max-width:220px;"><label>날짜 선택</label><input type="date" id="scheduleDatePicker" value="${todayStr()}"></div>
+      <button class="btn ghost sm" id="btnOpenDateSchedule">이 날짜 시간표 열기</button>
+    </div>
+
     <div class="section-title">시간표 설정 마법사</div>
     <div class="card">
       <div class="hint" style="margin:0 0 10px;">월~금 시간표를 한 번에 등록하고 싶다면 마법사를 사용하세요.</div>
@@ -1797,6 +1805,12 @@ function bindDynamicHandlers(){
     const list = state.schedule[scheduleDow]||[];
     const next = list.length? Math.max(...list.map(p=>p.period))+1 : 1;
     openPeriodModal(null, next, 'recurring');
+  };
+  const btnOpenDateSchedule = document.getElementById('btnOpenDateSchedule');
+  if(btnOpenDateSchedule) btnOpenDateSchedule.onclick = ()=>{
+    const picked = document.getElementById('scheduleDatePicker').value;
+    if(!picked){ toast('날짜를 선택해주세요.'); return; }
+    openDayDetail(picked);
   };
   const btnAddMeal = document.getElementById('btnAddMeal'); if(btnAddMeal) btnAddMeal.onclick = ()=>openMealModal(todayStr());
 
